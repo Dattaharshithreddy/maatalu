@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteVoiceFile } from './audio';
+import type { Speaker, Teacher } from './content';
 
 export type Profile = { child: string; age: '4-6' | '7-9' | '10-12'; gma: string; gpa: string };
 export type Message = { id: string; who: 'child' | 'gma' | 'gpa'; uri: string; seconds: number; at: number };
@@ -13,10 +14,11 @@ export type State = {
   minutes: Record<string, number>;
   premium: boolean;
   messages: Message[];
-  wordVoices: Record<string, string>;
+  wordVoices: Record<string, Partial<Record<Speaker, string>>>;
+  teacher: Teacher;
 };
 const fresh = (): State => ({
-  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, messages: [], wordVoices: {},
+  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, messages: [], wordVoices: {}, teacher: 'both',
 });
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -33,8 +35,9 @@ type Ctx = {
   setPremium: (v: boolean) => void;
   addMessage: (m: Message) => void;
   deleteMessage: (id: string) => void;
-  setWordVoice: (wordId: string, uri: string) => void;
-  deleteWordVoice: (wordId: string) => void;
+  setWordVoice: (wordId: string, who: Speaker, uri: string) => void;
+  deleteWordVoice: (wordId: string, who: Speaker) => void;
+  setTeacher: (t: Teacher) => void;
   resetAll: () => void;
   toast: (msg: string) => void;
   toastMsg: string | null;
@@ -49,7 +52,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     AsyncStorage.getItem(KEY)
-      .then((raw) => { if (raw) setS({ ...fresh(), ...JSON.parse(raw) }); })
+      .then((raw) => {
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        // Older builds stored one recording per word as a plain string (Ammamma's).
+        const wv: State['wordVoices'] = {};
+        for (const [k, v] of Object.entries(saved.wordVoices || {})) wv[k] = typeof v === 'string' ? { gma: v } : (v as State['wordVoices'][string]);
+        setS({ ...fresh(), ...saved, wordVoices: wv });
+      })
       .catch(() => {})
       .finally(() => setReady(true));
   }, []);
@@ -84,18 +94,23 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (m) deleteVoiceFile(m.uri);
       return { ...p, messages: p.messages.filter((x) => x.id !== id) };
     }),
-    setWordVoice: (wordId, uri) => setS((p) => {
-      if (p.wordVoices[wordId]) deleteVoiceFile(p.wordVoices[wordId]);
-      return { ...p, wordVoices: { ...p.wordVoices, [wordId]: uri } };
+    setWordVoice: (wordId, who, uri) => setS((p) => {
+      const old = p.wordVoices[wordId]?.[who];
+      if (old && old !== uri) deleteVoiceFile(old);
+      return { ...p, wordVoices: { ...p.wordVoices, [wordId]: { ...p.wordVoices[wordId], [who]: uri } } };
     }),
-    deleteWordVoice: (wordId) => setS((p) => {
-      if (p.wordVoices[wordId]) deleteVoiceFile(p.wordVoices[wordId]);
-      const wordVoices = { ...p.wordVoices }; delete wordVoices[wordId];
+    deleteWordVoice: (wordId, who) => setS((p) => {
+      const cur = { ...p.wordVoices[wordId] };
+      if (cur[who]) deleteVoiceFile(cur[who]!);
+      delete cur[who];
+      const wordVoices = { ...p.wordVoices };
+      if (cur.gma || cur.gpa) wordVoices[wordId] = cur; else delete wordVoices[wordId];
       return { ...p, wordVoices };
     }),
+    setTeacher: (teacher) => setS((p) => ({ ...p, teacher })),
     resetAll: () => setS((p) => {
       p.messages.forEach((m) => deleteVoiceFile(m.uri));
-      Object.values(p.wordVoices).forEach(deleteVoiceFile);
+      Object.values(p.wordVoices).forEach((v) => Object.values(v).forEach((u) => u && deleteVoiceFile(u)));
       return fresh();
     }),
   }), [s, ready, toast, toastMsg, finishSession]);

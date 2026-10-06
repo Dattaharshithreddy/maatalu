@@ -3,10 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { F, useTheme } from '../theme';
-import { Btn, Muggulu } from '../ui';
-import { ALL_WORDS, LESSON_SIZE, UNITS, Word, isLetter, shuffle } from '../content';
+import { Btn, Muggulu, SpeakWave, whoEmoji, whoName } from '../ui';
+import { ALL_WORDS, LESSON_SIZE, UNITS, Word, isLetter, shuffle, speakerFor } from '../content';
 import { useStore } from '../store';
-import { hasTeluguVoice, playWord, stopAll } from '../audio';
+import { hasRealVoice, hasTeluguVoice, playWord, stopAll } from '../audio';
 
 export type LessonMode = { kind: 'unit'; index: number } | { kind: 'review' };
 type Step = { t: 'learn'; w: Word } | { t: 'meaning'; w: Word; opts: Word[] } | { t: 'listen'; w: Word; opts: Word[] } | { t: 'win' };
@@ -50,7 +50,12 @@ export default function Lesson({ mode, onClose, onShowFamily }: { mode: LessonMo
   const started = useRef(Date.now());
   const step = steps[k];
   const quizTotal = steps.filter((x) => x.t === 'meaning' || x.t === 'listen').length;
-  const say = (w: Word) => playWord(w, s.wordVoices);
+  const [speaking, setSpeaking] = useState(false);
+  const say = (w: Word) => {
+    setSpeaking(true);
+    playWord(w, speakerFor(w, s.teacher), s.wordVoices, () => setSpeaking(false));
+  };
+  const p = s.profile!;
 
   useEffect(() => {
     setPicked(null);
@@ -64,7 +69,7 @@ export default function Lesson({ mode, onClose, onShowFamily }: { mode: LessonMo
       setResult({ stars, streak });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
-    if (k === 0 && !hasTeluguVoice()) toast('No Telugu voice on this phone. Install Google Text-to-speech Telugu, or record family voices in the Parents tab.');
+    if (k === 0 && !hasTeluguVoice()) toast('No Telugu voice found on this phone. Install Telugu in Google Text-to-speech, or record real voices in the Parents tab.');
   }, [k]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => stopAll(), []);
 
@@ -80,7 +85,8 @@ export default function Lesson({ mode, onClose, onShowFamily }: { mode: LessonMo
     Haptics.notificationAsync(ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning).catch(() => {});
     toast(ok ? 'Bhale! That is right ⭐' : 'Almost! The right answer is in green');
   };
-  const family = step.t !== 'win' && !!s.wordVoices[step.w.id];
+  const who = step.t !== 'win' ? speakerFor(step.w, s.teacher) : 'gma';
+  const real = step.t !== 'win' && hasRealVoice(step.w, who, s.wordVoices);
 
   return (
     <View style={[st.wrap, { backgroundColor: t.bg, paddingTop: ins.top + 10, paddingBottom: ins.bottom + 16 }]}>
@@ -93,14 +99,27 @@ export default function Lesson({ mode, onClose, onShowFamily }: { mode: LessonMo
 
       <View style={st.stage}>
         {step.t === 'learn' && (
-          <View style={[st.card, { backgroundColor: t.surface, borderColor: t.line }]}>
-            <Muggulu color={t.dot} size={260} />
-            <Text style={{ fontSize: 60, textAlign: 'center' }}>{step.w.e}</Text>
-            <Text style={[st.glyph, { color: t.leaf }, step.w.te.length > 10 && st.glyphLong]} adjustsFontSizeToFit numberOfLines={2}>{step.w.te}</Text>
-            <Text style={[st.tl, { color: t.ink }]}>{step.w.tl}</Text>
-            <Text style={[st.en, { color: t.muted }]}>{step.w.en}</Text>
-            <Btn variant="ghost" label={family ? `🔊 Hear ${s.profile?.gma}` : '🔊 Hear it'} onPress={() => say(step.w)} style={{ marginTop: 16, alignSelf: 'center' }} />
-          </View>
+          <>
+            <View style={[st.who, { backgroundColor: who === 'gma' ? t.kumkumSoft : t.leafSoft }]}>
+              <View style={[st.whoAv, { backgroundColor: t.surface, borderColor: who === 'gma' ? t.kumkum : t.leaf }]}>
+                <Text style={{ fontSize: 24 }}>{whoEmoji(who)}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 16 }}>{whoName(who, p)} says</Text>
+                <Text style={{ fontFamily: F.body, color: t.muted, fontSize: 12 }}>{real ? `${whoName(who, p)}'s own voice` : 'Robot voice for now'}</Text>
+              </View>
+              <SpeakWave active={speaking} color={who === 'gma' ? t.kumkum : t.leaf} />
+            </View>
+            <View style={[st.card, { backgroundColor: t.surface, borderColor: t.line, marginTop: 12 }]}>
+              <Muggulu color={t.dot} size={260} />
+              <Text style={{ fontSize: 60, textAlign: 'center' }}>{step.w.e}</Text>
+              <Text style={[st.glyph, { color: t.leaf }, step.w.te.length > 10 && st.glyphLong]} adjustsFontSizeToFit numberOfLines={2}>{step.w.te}</Text>
+              <Text style={[st.tl, { color: t.ink }]}>{step.w.tl}</Text>
+              <Text style={[st.en, { color: t.muted }]}>{step.w.en}</Text>
+              <Btn variant="ghost" label={`🔊 Hear ${whoName(who, p)} again`} onPress={() => say(step.w)} style={{ marginTop: 16, alignSelf: 'center' }} />
+            </View>
+            <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 17, textAlign: 'center', marginTop: 14 }}>Now you say it out loud 🗣️</Text>
+          </>
         )}
 
         {step.t === 'meaning' && (
@@ -189,6 +208,8 @@ const st = StyleSheet.create({
   listen: { width: 130, height: 130, borderRadius: 65, alignItems: 'center', justifyContent: 'center' },
   tile: { flex: 1, aspectRatio: 0.85, borderWidth: 2, borderBottomWidth: 5, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   tileTxt: { fontFamily: F.te, fontSize: 15, marginTop: 4, textAlign: 'center' },
+  who: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 20, padding: 10 },
+  whoAv: { width: 44, height: 44, borderRadius: 22, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
   tileGlyph: { fontFamily: F.teHeavy, fontSize: 52, lineHeight: 74 },
   winTitle: { fontFamily: F.teHeavy, fontSize: 38, lineHeight: 56, marginTop: 6 },
 });

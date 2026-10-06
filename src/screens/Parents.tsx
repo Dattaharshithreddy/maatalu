@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { F, useTheme } from '../theme';
-import { Btn, Card, H2 } from '../ui';
-import { ALL_WORDS, UNITS, Word } from '../content';
+import { Btn, Card, H2, whoEmoji, whoName } from '../ui';
+import { ALL_WORDS, Speaker, UNITS, Word, speakerFor } from '../content';
 import { dayKey, useStore } from '../store';
-import { playUri, playWord, useVoiceRecorder } from '../audio';
+import { hasRealVoice, importVoiceFile, newId, playSequence, playUri, playWord, stopAll, useVoiceRecorder } from '../audio';
 
 export default function Parents({ openPaywall }: { openPaywall: () => void }) {
   const t = useTheme();
@@ -25,7 +26,7 @@ export default function Parents({ openPaywall }: { openPaywall: () => void }) {
   const vals = days.map((d) => s.minutes[dayKey(d)] || 0);
   const max = Math.max(10, ...vals);
   const known = ALL_WORDS.filter((w) => s.learned.includes(w.id));
-  const recorded = Object.keys(s.wordVoices).length;
+  const recorded = ALL_WORDS.filter((w) => hasRealVoice(w, speakerFor(w, s.teacher), s.wordVoices)).length;
 
   return (
     <ScrollView contentContainerStyle={pad}>
@@ -53,8 +54,8 @@ export default function Parents({ openPaywall }: { openPaywall: () => void }) {
       <Pressable onPress={() => setView('voices')} style={[st.row, { backgroundColor: t.kumkumSoft }]} accessibilityRole="button">
         <Text style={{ fontSize: 30 }}>👵</Text>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 17 }}>{p.gma}'s voice pack</Text>
-          <Text style={{ fontFamily: F.body, color: t.muted }}>{recorded} of {ALL_WORDS.length} words recorded. Lessons play these instead of the robot voice.</Text>
+          <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 17 }}>{p.gma} and {p.gpa}'s voices</Text>
+          <Text style={{ fontFamily: F.body, color: t.muted }}>{recorded} of {ALL_WORDS.length} words in real voices. The rest use a robot voice: female for {p.gma}, male for {p.gpa}.</Text>
         </View>
       </Pressable>
 
@@ -101,49 +102,123 @@ function Gate({ onPass, top }: { onPass: () => void; top: number }) {
   );
 }
 
+type PickedFile = { uri: string; name: string };
+const natural = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+
 function VoicePack({ back }: { back: () => void }) {
   const t = useTheme();
   const { s, setWordVoice, deleteWordVoice, toast } = useStore();
   const rec = useVoiceRecorder();
-  const [active, setActive] = useState<string | null>(null);
   const p = s.profile!;
+  const [who, setWho] = useState<Speaker>('gma');
+  const [active, setActive] = useState<string | null>(null);
+  const [playingUnit, setPlayingUnit] = useState<string | null>(null);
+  const stopSeq = React.useRef<null | (() => void)>(null);
+  const [review, setReview] = useState<null | { unitId: string; targets: Word[]; files: PickedFile[] }>(null);
 
-  const onIn = (w: Word) => { setActive(w.id); rec.start(); };
+  React.useEffect(() => () => { stopSeq.current?.(); stopAll(); }, []);
+
+  const mine = (w: Word) => speakerFor(w, s.teacher) === who;
+  const units = UNITS.map((u) => ({ u, words: u.words.filter(mine) })).filter((x) => x.words.length > 0);
+  const total = units.reduce((n, x) => n + x.words.length, 0);
+  const done = units.reduce((n, x) => n + x.words.filter((w) => hasRealVoice(w, who, s.wordVoices)).length, 0);
+  const name = whoName(who, p);
+
+  const onIn = (w: Word) => { stopSeq.current?.(); setPlayingUnit(null); setActive(w.id); rec.start(); };
   const onOut = async (w: Word) => {
-    const r = await rec.stop(`word-${w.id}-${Date.now()}`);
+    const r = await rec.stop(`word-${w.id}-${who}-${Date.now()}`);
     setActive(null);
     if (r === 'denied') return toast('Microphone access is off. Turn it on in phone Settings.');
     if (r === 'too-short') return toast('Hold the mic button while saying the word');
     if (!r) return;
-    setWordVoice(w.id, r.uri);
-    toast(`Saved ${p.gma}'s "${w.tl}"`);
+    setWordVoice(w.id, who, r.uri);
+    toast(`Saved ${name}'s "${w.tl}"`);
+  };
+
+  const playUnit = (unitId: string, words: Word[]) => {
+    stopSeq.current?.();
+    if (playingUnit === unitId) { setPlayingUnit(null); return; }
+    setPlayingUnit(unitId);
+    stopSeq.current = playSequence(words.map((w) => ({ w, who })), s.wordVoices, undefined, () => setPlayingUnit(null));
+  };
+
+  const pickFiles = async (unitId: string, words: Word[]) => {
+    stopSeq.current?.(); setPlayingUnit(null);
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: 'audio/*', multiple: true, copyToCacheDirectory: true });
+      if (res.canceled || !res.assets?.length) return;
+      const missing = words.filter((w) => !hasRealVoice(w, who, s.wordVoices));
+      const targets = missing.length ? missing : words;
+      const files = res.assets.map((a) => ({ uri: a.uri, name: a.name })).sort((x, y) => natural(x.name, y.name));
+      setReview({ unitId, targets, files });
+    } catch { toast('Could not open the file picker'); }
+  };
+  const swap = (i: number) => setReview((r) => {
+    if (!r || i < 1) return r;
+    const files = [...r.files]; [files[i - 1], files[i]] = [files[i], files[i - 1]];
+    return { ...r, files };
+  });
+  const drop = (i: number) => setReview((r) => (r ? { ...r, files: r.files.filter((_, k) => k !== i) } : r));
+  const confirmImport = () => {
+    if (!review) return;
+    let ok = 0;
+    review.targets.forEach((w, i) => {
+      const f = review.files[i];
+      if (!f) return;
+      const uri = importVoiceFile(f.uri, `import-${w.id}-${who}-${newId()}`);
+      if (uri) { setWordVoice(w.id, who, uri); ok += 1; }
+    });
+    stopAll();
+    setReview(null);
+    toast(ok ? `Added ${ok} of ${name}'s real voices` : 'Could not read those files');
   };
 
   return (
     <View>
       <Pressable onPress={back} hitSlop={10}><Text style={{ fontFamily: F.bold, color: t.leaf, fontSize: 16 }}>‹ Back</Text></Pressable>
-      <Text style={[st.title, { color: t.ink }]}>{p.gma}'s voice pack</Text>
+      <Text style={[st.title, { color: t.ink }]}>Real voices</Text>
       <Text style={{ fontFamily: F.body, color: t.muted }}>
-        Hand the phone to {p.gma} or {p.gpa}, or record over a video call. Hold the mic, say the word, let go. Lessons will play their voice.
+        Until a real voice is added, lessons use a robot voice: female for {p.gma}, male for {p.gpa}. Each real recording replaces the robot for that word automatically.
       </Text>
-      {UNITS.map((u) => (
+
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+        {(['gma', 'gpa'] as Speaker[]).map((x) => (
+          <Pressable key={x} onPress={() => { stopSeq.current?.(); setPlayingUnit(null); setWho(x); }} accessibilityRole="radio" accessibilityState={{ selected: who === x }}
+            style={[st.tab, { borderColor: who === x ? t.kumkum : t.line, backgroundColor: who === x ? t.kumkumSoft : t.surface }]}>
+            <Text style={{ fontSize: 26 }}>{whoEmoji(x)}</Text>
+            <Text style={{ fontFamily: F.bold, color: t.ink }}>{whoName(x, p)}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <Text style={{ fontFamily: F.bold, color: t.ink, marginTop: 12 }}>{done} of {total} words in {name}'s real voice</Text>
+
+      {total === 0 ? (
+        <Card style={{ marginTop: 12 }}><Text style={{ fontFamily: F.body, color: t.muted }}>{name} is not teaching right now. Change this in Settings under "Who teaches the words".</Text></Card>
+      ) : units.map(({ u, words }) => (
         <View key={u.id}>
-          <H2>{u.name}</H2>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, marginBottom: 8 }}>
+            <Text style={{ fontFamily: F.te, fontSize: 20, color: t.ink, flex: 1 }} numberOfLines={1}>{u.name}</Text>
+            <Pressable onPress={() => playUnit(u.id, words)} accessibilityLabel={`Play ${u.name} one by one`}
+              style={[st.pill, { backgroundColor: t.leafSoft }]}><Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 13 }}>{playingUnit === u.id ? '■ Stop' : '▶ Play all'}</Text></Pressable>
+            <Pressable onPress={() => pickFiles(u.id, words)} accessibilityLabel={`Import voice files for ${u.name}`}
+              style={[st.pill, { backgroundColor: t.turmericSoft }]}><Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 13 }}>⬆ Import</Text></Pressable>
+          </View>
           <View style={{ gap: 8 }}>
-            {u.words.map((w) => {
-              const has = !!s.wordVoices[w.id], isRec = active === w.id && rec.recording;
+            {words.map((w) => {
+              const has = hasRealVoice(w, who, s.wordVoices), isRec = active === w.id && rec.recording;
               return (
                 <View key={w.id} style={[st.vrow, { backgroundColor: t.surface, borderColor: isRec ? t.kumkum : t.line }]}>
                   <Text style={{ fontSize: 24 }}>{w.e}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontFamily: F.te, color: t.ink, fontSize: 19 }}>{w.te}</Text>
                     <Text style={{ fontFamily: F.body, color: t.muted, fontSize: 13, marginTop: -4 }}>{w.tl}, {w.en}</Text>
+                    <Text style={{ fontFamily: F.bold, fontSize: 12, color: has ? t.leaf : t.muted }}>{has ? '✓ Real voice' : 'Robot voice'}</Text>
                   </View>
-                  <Pressable onPress={() => playWord(w, s.wordVoices)} accessibilityLabel={`Play ${w.en}`} style={[st.mini, { backgroundColor: t.leafSoft }]}>
-                    <Text style={{ fontSize: 16 }}>{has ? '👵' : '🔊'}</Text>
+                  <Pressable onPress={() => playWord(w, who, s.wordVoices)} accessibilityLabel={`Play ${w.en}`} style={[st.mini, { backgroundColor: t.leafSoft }]}>
+                    <Text style={{ fontSize: 16 }}>🔊</Text>
                   </Pressable>
                   {has && (
-                    <Pressable onPress={() => Alert.alert('Remove this recording?', undefined, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => deleteWordVoice(w.id) }])}
+                    <Pressable onPress={() => Alert.alert('Go back to the robot voice for this word?', undefined, [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => deleteWordVoice(w.id, who) }])}
                       accessibilityLabel={`Remove recording for ${w.en}`} style={[st.mini, { backgroundColor: t.kumkumSoft }]}>
                       <Text style={{ fontSize: 14 }}>✕</Text>
                     </Pressable>
@@ -158,13 +233,48 @@ function VoicePack({ back }: { back: () => void }) {
           </View>
         </View>
       ))}
+
+      <Modal visible={!!review} animationType="slide" onRequestClose={() => { stopAll(); setReview(null); }}>
+        <View style={{ flex: 1, backgroundColor: t.bg, paddingTop: 48 }}>
+          <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+            <Text style={[st.title, { color: t.ink }]}>Match voice notes</Text>
+            <Text style={{ fontFamily: F.body, color: t.muted }}>
+              Files are matched to words in order, sorted by file name. Preview each one. Use ↑ to swap or ✕ to leave a file out, then import.
+            </Text>
+            {review && review.targets.map((w, i) => {
+              const f = review.files[i];
+              return (
+                <View key={w.id} style={[st.vrow, { backgroundColor: t.surface, borderColor: t.line, marginTop: 8 }]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: F.te, color: t.ink, fontSize: 19 }}>{w.te} <Text style={{ fontFamily: F.body, fontSize: 13, color: t.muted }}>{w.en}</Text></Text>
+                    <Text style={{ fontFamily: F.body, color: f ? t.ink : t.muted, fontSize: 13 }} numberOfLines={1}>{f ? f.name : 'No file, stays a robot voice'}</Text>
+                  </View>
+                  {f && (
+                    <>
+                      <Pressable onPress={() => playUri(f.uri)} accessibilityLabel="Preview" style={[st.mini, { backgroundColor: t.leafSoft }]}><Text>▶</Text></Pressable>
+                      {i > 0 && <Pressable onPress={() => swap(i)} accessibilityLabel="Swap with the file above" style={[st.mini, { backgroundColor: t.turmericSoft }]}><Text>↑</Text></Pressable>}
+                      <Pressable onPress={() => drop(i)} accessibilityLabel="Leave this file out" style={[st.mini, { backgroundColor: t.kumkumSoft }]}><Text>✕</Text></Pressable>
+                    </>
+                  )}
+                </View>
+              );
+            })}
+            {review && review.files.length > review.targets.length && (
+              <Text style={{ fontFamily: F.body, color: t.muted, marginTop: 10 }}>{review.files.length - review.targets.length} extra file(s) will not be used.</Text>
+            )}
+            <Btn style={{ marginTop: 18 }} label={`Import ${review ? Math.min(review.files.length, review.targets.length) : 0} voice notes`}
+              disabled={!review || review.files.length === 0} onPress={confirmImport} />
+            <Btn style={{ marginTop: 10 }} variant="ghost" label="Cancel" onPress={() => { stopAll(); setReview(null); }} />
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
 
 function Settings({ back, openPaywall }: { back: () => void; openPaywall: () => void }) {
   const t = useTheme();
-  const { s, setProfile, setPremium, resetAll, toast } = useStore();
+  const { s, setProfile, setPremium, setTeacher, resetAll, toast } = useStore();
   const p = s.profile!;
   const [child, setChild] = useState(p.child);
   const [gma, setGma] = useState(p.gma);
@@ -182,6 +292,18 @@ function Settings({ back, openPaywall }: { back: () => void; openPaywall: () => 
       <TextInput value={gpa} onChangeText={setGpa} style={input} />
       <Btn style={{ marginTop: 16 }} label="Save names" disabled={!child.trim()}
         onPress={() => { setProfile({ ...p, child: child.trim(), gma: gma.trim() || p.gma, gpa: gpa.trim() || p.gpa }); toast('Names saved'); }} />
+
+      <H2>Who teaches the words?</H2>
+      <View style={{ gap: 8 }}>
+        {([['both', `Both take turns`], ['gma', `Only ${p.gma}`], ['gpa', `Only ${p.gpa}`]] as const).map(([id, label]) => (
+          <Pressable key={id} onPress={() => setTeacher(id)} accessibilityRole="radio" accessibilityState={{ selected: s.teacher === id }}
+            style={[st.vrow, { backgroundColor: s.teacher === id ? t.leafSoft : t.surface, borderColor: s.teacher === id ? t.leaf : t.line }]}>
+            <Text style={{ fontSize: 22 }}>{id === 'both' ? '👵👴' : whoEmoji(id)}</Text>
+            <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 16, flex: 1 }}>{label}</Text>
+            {s.teacher === id && <Text style={{ color: t.leaf, fontFamily: F.bold }}>✓</Text>}
+          </Pressable>
+        ))}
+      </View>
 
       <H2>Subscription</H2>
       <Card>
@@ -212,5 +334,7 @@ const st = StyleSheet.create({
   input: { borderWidth: 2, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontFamily: F.body, fontSize: 17, marginTop: 6 },
   label: { fontFamily: F.bold, fontSize: 15, marginTop: 14, color: '#7A8C84' },
   vrow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 2, borderRadius: 18, padding: 10 },
+  tab: { flex: 1, alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingVertical: 10 },
+  pill: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   mini: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });

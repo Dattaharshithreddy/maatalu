@@ -17,15 +17,18 @@
 
 ## What works
 - Onboarding: child's name, age, grandparents' names
-- 21 units, 198 items: everyday words, the Telugu alphabet (vowels and first consonants) and full sentences for phone calls and home, taught in bite-sized lessons of 6
+- 21 units, 199 items: everyday words, the Telugu alphabet and full sentences, taught in bite-sized lessons of 6
 - Stars, daily streak, minutes tracking, quick review of known words
+- Ammamma (robot female voice) and Tatayya (robot male voice) say the words one by one; they take turns, or one teaches alone (Parents > Settings)
+- Real voices replace the robot per word: hold-to-record, or import voice-note files (matched to words in order, with preview and reorder)
 - Family tab: real voice-note recording and playback (child, grandma, grandpa), long-press to delete
-- Grandma's voice pack: record each word; lessons then play her voice instead of the phone's voice
 - Parents tab behind a grown-ups question: progress, weekly chart, words known, settings, erase all
 - Free plan (3 units) and a Plus paywall (test mode, no payment taken)
 - Light and dark mode; progress and recordings saved on the phone
 
 ## Not built yet (next phase)
+- Automatically splitting ONE long recording into words: needs Telugu speech recognition with word timestamps (cloud AI + a small server)
+- Voice cloning from sample recordings: needs a paid cloning service and the grandparent's consent
 - Real payments: connect RevenueCat + Google Play Billing
 - Sending voice notes to family in India on another phone: needs a backend (e.g. Supabase auth + storage)
 - Daily reminder notifications

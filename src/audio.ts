@@ -4,23 +4,43 @@ import {
   createAudioPlayer, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder, RecordingPresets,
 } from 'expo-audio';
 import { Directory, File, Paths } from 'expo-file-system';
-import type { Word } from './content';
+import type { Speaker, Word } from './content';
 
 type Player = ReturnType<typeof createAudioPlayer>;
 let current: Player | null = null;
-let teluguVoice: string | undefined;
 let voiceChecked = false;
+let haveTelugu = false;
+let distinct = false;
+const voiceId: Partial<Record<Speaker, string>> = {};
 
+/**
+ * Finds Telugu voices on the phone and gives Ammamma a female voice and Tatayya a male one.
+ * If the phone only has one Telugu voice, pitch makes the two sound different.
+ */
 export async function checkTeluguVoice(): Promise<boolean> {
   try {
-    const voices = await Speech.getAvailableVoicesAsync();
-    const v = voices.find((x) => x.language?.toLowerCase().startsWith('te'));
-    teluguVoice = v?.identifier;
-    voiceChecked = true;
-    return !!v;
-  } catch { voiceChecked = true; return false; }
+    const all = await Speech.getAvailableVoicesAsync();
+    const te = all.filter((v) => v.language?.toLowerCase().replace('_', '-').startsWith('te'));
+    const tag = (v: Speech.Voice) => `${v.identifier} ${v.name}`.toLowerCase();
+    const isF = (v: Speech.Voice) => /\b(tef|female|woman)\b/.test(tag(v));
+    const isM = (v: Speech.Voice) => /\b(tem|male|man)\b/.test(tag(v));
+    const best = (list: Speech.Voice[]) =>
+      [...list].sort((a, b) => Number(!tag(a).includes('local')) - Number(!tag(b).includes('local')))[0];
+    const f = best(te.filter(isF)), m = best(te.filter(isM)), any = best(te);
+    voiceId.gma = (f || any)?.identifier;
+    voiceId.gpa = (m || any)?.identifier;
+    distinct = !!f && !!m && f.identifier !== m.identifier;
+    haveTelugu = te.length > 0;
+  } catch { haveTelugu = false; }
+  voiceChecked = true;
+  return haveTelugu;
 }
-export const hasTeluguVoice = () => !voiceChecked || !!teluguVoice;
+export const hasTeluguVoice = () => !voiceChecked || haveTelugu;
+
+const PROFILE = (who: Speaker) =>
+  who === 'gma'
+    ? { pitch: distinct ? 1.08 : 1.28, rate: 0.82 }
+    : { pitch: distinct ? 0.92 : 0.78, rate: 0.78 };
 
 export function stopAll() {
   Speech.stop();
@@ -30,10 +50,12 @@ export function stopAll() {
   }
 }
 
-export function speak(text: string, onEnd?: () => void) {
+/** Robot voice: female for Ammamma, male for Tatayya. */
+export function speakAs(text: string, who: Speaker, onEnd?: () => void) {
   stopAll();
+  const { pitch, rate } = PROFILE(who);
   Speech.speak(text, {
-    language: 'te-IN', voice: teluguVoice, rate: 0.85,
+    language: 'te-IN', voice: voiceId[who], pitch, rate,
     onDone: onEnd, onStopped: onEnd, onError: () => onEnd?.(),
   });
 }
@@ -55,9 +77,37 @@ export function playUri(uri: string, onEnd?: () => void) {
   } catch { onEnd?.(); }
 }
 
-export function playWord(w: Word, wordVoices: Record<string, string>, onEnd?: () => void) {
-  const uri = wordVoices[w.id];
-  if (uri) playUri(uri, onEnd); else speak(w.te, onEnd);
+export const fileExists = (uri: string) => { try { return new File(uri).exists; } catch { return false; } };
+
+/** Which kind of voice will say this word: the family's real recording, or the robot. */
+export const hasRealVoice = (w: Word, who: Speaker, voices: Record<string, Partial<Record<Speaker, string>>>) => {
+  const uri = voices[w.id]?.[who];
+  return !!uri && fileExists(uri);
+};
+
+/** Real recording if the grandparent has made one for this word, otherwise their robot voice. */
+export function playWord(w: Word, who: Speaker, voices: Record<string, Partial<Record<Speaker, string>>>, onEnd?: () => void) {
+  const uri = voices[w.id]?.[who];
+  if (uri && fileExists(uri)) playUri(uri, onEnd); else speakAs(w.te, who, onEnd);
+}
+
+/** Plays words one by one with a short pause between. Returns a function that stops it. */
+export function playSequence(
+  items: { w: Word; who: Speaker }[],
+  voices: Record<string, Partial<Record<Speaker, string>>>,
+  onStep?: (i: number) => void,
+  onDone?: () => void,
+) {
+  let stopped = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const run = (i: number) => {
+    if (stopped) return;
+    if (i >= items.length) { onDone?.(); return; }
+    onStep?.(i);
+    playWord(items[i].w, items[i].who, voices, () => { if (!stopped) timer = setTimeout(() => run(i + 1), 1100); });
+  };
+  run(0);
+  return () => { stopped = true; if (timer) clearTimeout(timer); stopAll(); };
 }
 
 export function deleteVoiceFile(uri: string) {
@@ -73,6 +123,18 @@ function persist(uri: string, id: string): string {
     src.moveSync(dest);
     return src.uri;
   } catch { return uri; }
+}
+
+/** Copies a picked audio file into the app's own storage so it survives cache clean-ups. */
+export function importVoiceFile(srcUri: string, id: string): string | null {
+  try {
+    const dir = new Directory(Paths.document, 'voices');
+    dir.create({ idempotent: true });
+    const ext = (srcUri.split('?')[0].match(/\.[a-z0-9]{2,5}$/i)?.[0] ?? '.m4a').toLowerCase();
+    const dest = new File(dir, `${id}${ext}`);
+    new File(srcUri).copySync(dest);
+    return dest.uri;
+  } catch { return null; }
 }
 
 export type RecordResult = { uri: string; seconds: number } | 'denied' | 'too-short' | null;

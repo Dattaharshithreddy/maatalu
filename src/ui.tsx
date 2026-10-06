@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, ViewStyle, StyleProp } from 'react-native';
 import { F, Theme, useTheme } from './theme';
 
@@ -92,4 +92,22 @@ export function ago(ts: number) {
   if (h < 24) return `${h} h ago`;
   const d = Math.round(h / 24);
   return d === 1 ? 'yesterday' : `${d} days ago`;
+}
+
+/** Little sound bars that move while someone is speaking. */
+export function SpeakWave({ active, color }: { active: boolean; color: string }) {
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setPhase((x) => x + 1), 120);
+    return () => clearInterval(id);
+  }, [active]);
+  return (
+    <View style={{ flexDirection: 'row', gap: 3, alignItems: 'center', height: 22 }}>
+      {Array.from({ length: 12 }).map((_, i) => (
+        <View key={i} style={{ width: 4, borderRadius: 2, backgroundColor: color, opacity: active ? 1 : 0.35,
+          height: active ? 6 + Math.abs(Math.sin((i + phase) * 0.8)) * 16 : 6 + ((i * 7) % 4) * 2 }} />
+      ))}
+    </View>
+  );
 }

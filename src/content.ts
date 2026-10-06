@@ -1,3 +1,5 @@
+export type Speaker = 'gma' | 'gpa';
+export type Teacher = 'both' | Speaker;
 export type Word = { id: string; te: string; tl: string; en: string; e: string };
 export type Unit = { id: string; name: string; icon: string; free: boolean; kind?: 'letters' | 'sentences'; words: Word[] };
 
@@ -258,3 +260,10 @@ export const unitOf = (w: Word): Unit => UNITS.find((u) => u.words.some((x) => x
 export const isLetter = (w: Word) => unitOf(w).kind === 'letters';
 export const LESSON_SIZE = 6;
 export const shuffle = <T,>(a: T[]): T[] => [...a].sort(() => Math.random() - 0.5);
+
+/** Which grandparent voices a word. In "both" mode they take turns: Ammamma first, then Tatayya. */
+export const speakerFor = (w: Word, teacher: Teacher): Speaker => {
+  if (teacher !== 'both') return teacher;
+  const n = Number(w.id.slice(w.id.lastIndexOf('-') + 1)) || 1;
+  return n % 2 === 1 ? 'gma' : 'gpa';
+};
