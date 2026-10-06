@@ -49,7 +49,7 @@ export default function Onboarding() {
           ))}
         </View>
         <Text style={[st.title, { color: t.ink, marginTop: 28 }]}>Family in India</Text>
-        <Text style={{ fontFamily: F.body, color: t.muted, marginBottom: 6 }}>Use the names your child calls them. These appear in lessons and voice messages.</Text>
+        <Text style={{ fontFamily: F.body, color: t.muted, marginBottom: 6 }}>Use the names your child calls them. They teach the words in lessons, first as robot voices and later in their own real voices.</Text>
         <Text style={label}>Grandma</Text>
         <TextInput value={gma} onChangeText={setGma} style={input} />
         <Text style={label}>Grandpa</Text>

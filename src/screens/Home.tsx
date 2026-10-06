@@ -2,14 +2,13 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { F, useTheme } from '../theme';
-import { Btn, Chip, H2, Muggulu, ago, whoEmoji, whoName } from '../ui';
+import { Btn, Chip, H2, Muggulu } from '../ui';
 import { LESSON_SIZE, UNITS } from '../content';
 import { useStore } from '../store';
-import { playUri } from '../audio';
 
-type Props = { openUnit: (i: number) => void; openReview: () => void; openPaywall: () => void; goFamily: () => void };
+type Props = { openUnit: (i: number) => void; openReview: () => void; openPaywall: () => void };
 
-export default function Home({ openUnit, openReview, openPaywall, goFamily }: Props) {
+export default function Home({ openUnit, openReview, openPaywall }: Props) {
   const t = useTheme();
   const ins = useSafeAreaInsets();
   const { s, toast } = useStore();
@@ -21,7 +20,6 @@ export default function Home({ openUnit, openReview, openPaywall, goFamily }: Pr
   const nextIdx = UNITS.findIndex((_, i) => !done(i));
   const cur = nextIdx < 0 ? -1 : nextIdx;
   const needsPremium = (i: number) => !UNITS[i].free && !s.premium;
-  const latest = s.messages.find((m) => m.who !== 'child');
 
   const tapUnit = (i: number) => {
     if (needsPremium(i)) return openPaywall();
@@ -68,26 +66,6 @@ export default function Home({ openUnit, openReview, openPaywall, goFamily }: Pr
           <View style={{ flex: 1 }}>
             <Text style={[st.rowTitle, { color: t.ink }]}>Quick review</Text>
             <Text style={{ fontFamily: F.body, color: t.muted }}>Practise 5 words {p.child} already knows</Text>
-          </View>
-        </Pressable>
-      )}
-
-      {latest ? (
-        <View style={[st.row, { backgroundColor: t.kumkumSoft }]}>
-          <View style={[st.av, { borderColor: t.kumkum, backgroundColor: t.surface }]}><Text style={{ fontSize: 26 }}>{whoEmoji(latest.who)}</Text></View>
-          <Pressable style={{ flex: 1 }} onPress={goFamily}>
-            <Text style={[st.rowTitle, { color: t.ink }]}>Message from {whoName(latest.who, p)}</Text>
-            <Text style={{ fontFamily: F.body, color: t.muted }}>{latest.seconds}s voice note, {ago(latest.at)}</Text>
-          </Pressable>
-          <Pressable onPress={() => playUri(latest.uri)} accessibilityLabel="Play message"
-            style={[st.play, { backgroundColor: t.kumkum }]}><Text style={st.playTxt}>▶</Text></Pressable>
-        </View>
-      ) : (
-        <Pressable onPress={goFamily} style={[st.row, { backgroundColor: t.kumkumSoft }]} accessibilityRole="button">
-          <Text style={{ fontSize: 30 }}>👵</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={[st.rowTitle, { color: t.ink }]}>Ask {p.gma} to record a message</Text>
-            <Text style={{ fontFamily: F.body, color: t.muted }}>Kids learn fastest from family voices</Text>
           </View>
         </Pressable>
       )}

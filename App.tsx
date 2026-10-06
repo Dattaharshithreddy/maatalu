@@ -12,11 +12,10 @@ import { checkTeluguVoice, stopAll } from './src/audio';
 import Onboarding from './src/screens/Onboarding';
 import Home from './src/screens/Home';
 import Lesson, { LessonMode } from './src/screens/Lesson';
-import Family from './src/screens/Family';
 import Parents from './src/screens/Parents';
 import Paywall from './src/screens/Paywall';
 
-type Tab = 'home' | 'family' | 'parents';
+type Tab = 'home' | 'parents';
 
 function Root() {
   const t = useTheme();
@@ -35,15 +34,14 @@ function Root() {
   if (!s.profile) return (<><Onboarding /><Toast msg={toastMsg} bottom={ins.bottom + 30} /></>);
 
   const go = (x: Tab) => { stopAll(); setTab(x); };
-  const tabs: [Tab, string, string][] = [['home', '🏡', 'Learn'], ['family', '👵', 'Family'], ['parents', '🌱', 'Parents']];
+  const tabs: [Tab, string, string][] = [['home', '🏡', 'Learn'], ['parents', '🌱', 'For parents']];
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
       {tab === 'home' && (
         <Home openUnit={(index) => setLesson({ kind: 'unit', index })} openReview={() => setLesson({ kind: 'review' })}
-          openPaywall={() => setPaywall(true)} goFamily={() => go('family')} />
+          openPaywall={() => setPaywall(true)} />
       )}
-      {tab === 'family' && <Family />}
       {tab === 'parents' && <Parents openPaywall={() => setPaywall(true)} />}
 
       <View style={[st.tabs, { backgroundColor: t.surface, borderTopColor: t.line, paddingBottom: ins.bottom }]}>
@@ -57,8 +55,7 @@ function Root() {
 
       <Modal visible={!!lesson} animationType="slide" onRequestClose={() => setLesson(null)} statusBarTranslucent>
         {lesson && (
-          <Lesson mode={lesson} onClose={() => { stopAll(); setLesson(null); }}
-            onShowFamily={() => { stopAll(); setLesson(null); go('family'); }} />
+          <Lesson mode={lesson} onClose={() => { stopAll(); setLesson(null); }} />
         )}
         <Toast msg={toastMsg} bottom={ins.bottom + 110} />
       </Modal>

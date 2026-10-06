@@ -4,7 +4,6 @@ import { deleteVoiceFile } from './audio';
 import type { Speaker, Teacher } from './content';
 
 export type Profile = { child: string; age: '4-6' | '7-9' | '10-12'; gma: string; gpa: string };
-export type Message = { id: string; who: 'child' | 'gma' | 'gpa'; uri: string; seconds: number; at: number };
 export type State = {
   profile: Profile | null;
   stars: number;
@@ -13,12 +12,11 @@ export type State = {
   lastDay: string | null;
   minutes: Record<string, number>;
   premium: boolean;
-  messages: Message[];
   wordVoices: Record<string, Partial<Record<Speaker, string>>>;
   teacher: Teacher;
 };
 const fresh = (): State => ({
-  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, messages: [], wordVoices: {}, teacher: 'both',
+  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, wordVoices: {}, teacher: 'both',
 });
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -33,8 +31,6 @@ type Ctx = {
   addStars: (n: number) => void;
   finishSession: (minutes: number) => number;
   setPremium: (v: boolean) => void;
-  addMessage: (m: Message) => void;
-  deleteMessage: (id: string) => void;
   setWordVoice: (wordId: string, who: Speaker, uri: string) => void;
   deleteWordVoice: (wordId: string, who: Speaker) => void;
   setTeacher: (t: Teacher) => void;
@@ -58,6 +54,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         // Older builds stored one recording per word as a plain string (Ammamma's).
         const wv: State['wordVoices'] = {};
         for (const [k, v] of Object.entries(saved.wordVoices || {})) wv[k] = typeof v === 'string' ? { gma: v } : (v as State['wordVoices'][string]);
+        // Older builds kept "family messages" on the phone. They were never sent anywhere, so clear them.
+        (saved.messages || []).forEach((m: { uri?: string }) => m.uri && deleteVoiceFile(m.uri));
+        delete saved.messages;
         setS({ ...fresh(), ...saved, wordVoices: wv });
       })
       .catch(() => {})
@@ -88,12 +87,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     learn: (ids) => setS((p) => ({ ...p, learned: Array.from(new Set([...p.learned, ...ids])) })),
     addStars: (n) => setS((p) => ({ ...p, stars: p.stars + n })),
     setPremium: (premium) => setS((p) => ({ ...p, premium })),
-    addMessage: (m) => setS((p) => ({ ...p, messages: [m, ...p.messages] })),
-    deleteMessage: (id) => setS((p) => {
-      const m = p.messages.find((x) => x.id === id);
-      if (m) deleteVoiceFile(m.uri);
-      return { ...p, messages: p.messages.filter((x) => x.id !== id) };
-    }),
     setWordVoice: (wordId, who, uri) => setS((p) => {
       const old = p.wordVoices[wordId]?.[who];
       if (old && old !== uri) deleteVoiceFile(old);
@@ -109,7 +102,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     }),
     setTeacher: (teacher) => setS((p) => ({ ...p, teacher })),
     resetAll: () => setS((p) => {
-      p.messages.forEach((m) => deleteVoiceFile(m.uri));
       Object.values(p.wordVoices).forEach((v) => Object.values(v).forEach((u) => u && deleteVoiceFile(u)));
       return fresh();
     }),

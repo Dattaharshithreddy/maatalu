@@ -161,7 +161,7 @@ export function useVoiceRecorder() {
     return starting.current;
   };
 
-  const stop = async (id: string): Promise<RecordResult> => {
+  const stop = async (id: string, keep = true): Promise<RecordResult> => {
     if (!starting.current) return null;
     const ok = await starting.current;
     starting.current = null;
@@ -173,7 +173,7 @@ export function useVoiceRecorder() {
     const uri = recorder.uri;
     if (!uri) return null;
     if (ms < 800) { deleteVoiceFile(uri); return 'too-short'; }
-    return { uri: persist(uri, id), seconds: Math.max(1, Math.round(ms / 1000)) };
+    return { uri: keep ? persist(uri, id) : uri, seconds: Math.max(1, Math.round(ms / 1000)) };
   };
 
   return { recording, start, stop };

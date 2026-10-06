@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as Sharing from 'expo-sharing';
 import { F, useTheme } from '../theme';
 import { Btn, Muggulu, SpeakWave, whoEmoji, whoName } from '../ui';
 import { ALL_WORDS, LESSON_SIZE, UNITS, Word, isLetter, shuffle, speakerFor } from '../content';
 import { useStore } from '../store';
-import { hasRealVoice, hasTeluguVoice, playWord, stopAll } from '../audio';
+import { hasRealVoice, hasTeluguVoice, playWord, stopAll, useVoiceRecorder } from '../audio';
 
 export type LessonMode = { kind: 'unit'; index: number } | { kind: 'review' };
 type Step = { t: 'learn'; w: Word } | { t: 'meaning'; w: Word; opts: Word[] } | { t: 'listen'; w: Word; opts: Word[] } | { t: 'win' };
@@ -38,7 +39,7 @@ function buildSteps(mode: LessonMode, learned: string[]): Step[] {
   ];
 }
 
-export default function Lesson({ mode, onClose, onShowFamily }: { mode: LessonMode; onClose: () => void; onShowFamily: () => void }) {
+export default function Lesson({ mode, onClose }: { mode: LessonMode; onClose: () => void }) {
   const t = useTheme();
   const ins = useSafeAreaInsets();
   const { s, learn, addStars, finishSession, toast } = useStore();
@@ -56,6 +57,18 @@ export default function Lesson({ mode, onClose, onShowFamily }: { mode: LessonMo
     playWord(w, speakerFor(w, s.teacher), s.wordVoices, () => setSpeaking(false));
   };
   const p = s.profile!;
+  const rec = useVoiceRecorder();
+  const talkIn = () => { stopAll(); rec.start(); };
+  const talkOut = async () => {
+    const r = await rec.stop(`share-${Date.now()}`, false);
+    if (r === 'denied') return toast('Microphone access is off. Turn it on in phone Settings.');
+    if (r === 'too-short') return toast('Keep holding the button while you talk');
+    if (!r) return;
+    try {
+      if (!(await Sharing.isAvailableAsync())) return toast('Sharing is not available on this phone');
+      await Sharing.shareAsync(r.uri, { mimeType: 'audio/mp4', dialogTitle: `Send to ${p.gma}`, UTI: 'public.mpeg-4-audio' });
+    } catch { toast('Could not open sharing. Try again.'); }
+  };
 
   useEffect(() => {
     setPicked(null);
@@ -185,7 +198,11 @@ export default function Lesson({ mode, onClose, onShowFamily }: { mode: LessonMo
       {(step.t === 'meaning' || step.t === 'listen') && <Btn label="Next" disabled={!picked} onPress={next} />}
       {step.t === 'win' && (
         <View style={{ gap: 12 }}>
-          <Btn label={`Send ${s.profile?.gma} a voice note 💛`} onPress={onShowFamily} />
+          <Text style={{ fontFamily: F.body, color: t.muted, textAlign: 'center' }}>
+            Tell {p.gma} what you learned today. Hold the button, talk, then send it on WhatsApp.
+          </Text>
+          <Btn variant="danger" label={rec.recording ? '🔴 Recording… let go to send' : `🎙️ Hold to tell ${p.gma}`}
+            onPressIn={talkIn} onPressOut={talkOut} a11y={`Hold to record a voice note for ${p.gma}`} />
           <Btn variant="ghost" label="Done" onPress={onClose} />
         </View>
       )}

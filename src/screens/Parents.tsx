@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { F, useTheme } from '../theme';
@@ -142,13 +142,25 @@ function VoicePack({ back }: { back: () => void }) {
     stopSeq.current = playSequence(words.map((w) => ({ w, who })), s.wordVoices, undefined, () => setPlayingUnit(null));
   };
 
+  // Words still waiting for a real voice (or all of them if every word already has one).
+  const targetsOf = (words: Word[]) => {
+    const missing = words.filter((w) => !hasRealVoice(w, who, s.wordVoices));
+    return missing.length ? missing : words;
+  };
+  const askOnWhatsApp = async (unitName: string, words: Word[]) => {
+    const lines = targetsOf(words).map((w, i) => `${i + 1}. ${w.te} (${w.tl}) - ${w.en}`).join('\n');
+    const message =
+      `${name}, నమస్కారం! 🙏\nదయచేసి ఈ మాటలను ఒక్కొక్కటి ఒక్కో వాయిస్ నోట్‌లో, ఈ వరుసలోనే చెప్పి పంపండి 💛\n\n` +
+      `Please record each word below as its own voice note, slowly and clearly, in this order (${unitName}):\n\n${lines}`;
+    try { await Share.share({ message }); } catch { toast('Could not open sharing'); }
+  };
+
   const pickFiles = async (unitId: string, words: Word[]) => {
     stopSeq.current?.(); setPlayingUnit(null);
     try {
       const res = await DocumentPicker.getDocumentAsync({ type: 'audio/*', multiple: true, copyToCacheDirectory: true });
       if (res.canceled || !res.assets?.length) return;
-      const missing = words.filter((w) => !hasRealVoice(w, who, s.wordVoices));
-      const targets = missing.length ? missing : words;
+      const targets = targetsOf(words);
       const files = res.assets.map((a) => ({ uri: a.uri, name: a.name })).sort((x, y) => natural(x.name, y.name));
       setReview({ unitId, targets, files });
     } catch { toast('Could not open the file picker'); }
@@ -177,9 +189,15 @@ function VoicePack({ back }: { back: () => void }) {
     <View>
       <Pressable onPress={back} hitSlop={10}><Text style={{ fontFamily: F.bold, color: t.leaf, fontSize: 16 }}>‹ Back</Text></Pressable>
       <Text style={[st.title, { color: t.ink }]}>Real voices</Text>
-      <Text style={{ fontFamily: F.body, color: t.muted }}>
-        Until a real voice is added, lessons use a robot voice: female for {p.gma}, male for {p.gpa}. Each real recording replaces the robot for that word automatically.
-      </Text>
+      <Card style={{ marginTop: 10, backgroundColor: t.turmericSoft, borderColor: 'transparent' }}>
+        <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 16 }}>How to add {p.gma}'s real voice</Text>
+        <Text style={{ fontFamily: F.body, color: t.ink, marginTop: 4, lineHeight: 21 }}>
+          1. Under a unit below, tap 📲 Ask on WhatsApp. It sends the word list to {p.gma}.{'\n'}
+          2. {p.gma} sends back one voice note per word, in order.{'\n'}
+          3. Tap ⬆ Import notes and pick those voice notes (WhatsApp keeps them in a folder called "WhatsApp Voice Notes").{'\n'}
+          Or hold the red mic next to a word to record it yourself. Until then, a robot voice is used: female for {p.gma}, male for {p.gpa}.
+        </Text>
+      </Card>
 
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
         {(['gma', 'gpa'] as Speaker[]).map((x) => (
@@ -196,12 +214,16 @@ function VoicePack({ back }: { back: () => void }) {
         <Card style={{ marginTop: 12 }}><Text style={{ fontFamily: F.body, color: t.muted }}>{name} is not teaching right now. Change this in Settings under "Who teaches the words".</Text></Card>
       ) : units.map(({ u, words }) => (
         <View key={u.id}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, marginBottom: 8 }}>
-            <Text style={{ fontFamily: F.te, fontSize: 20, color: t.ink, flex: 1 }} numberOfLines={1}>{u.name}</Text>
-            <Pressable onPress={() => playUnit(u.id, words)} accessibilityLabel={`Play ${u.name} one by one`}
-              style={[st.pill, { backgroundColor: t.leafSoft }]}><Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 13 }}>{playingUnit === u.id ? '■ Stop' : '▶ Play all'}</Text></Pressable>
-            <Pressable onPress={() => pickFiles(u.id, words)} accessibilityLabel={`Import voice files for ${u.name}`}
-              style={[st.pill, { backgroundColor: t.turmericSoft }]}><Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 13 }}>⬆ Import</Text></Pressable>
+          <View style={{ marginTop: 20, marginBottom: 8 }}>
+            <Text style={{ fontFamily: F.te, fontSize: 20, color: t.ink }}>{u.name}</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 }}>
+              <Pressable onPress={() => askOnWhatsApp(u.name, words)} accessibilityLabel={`Ask ${name} on WhatsApp for ${u.name}`}
+                style={[st.pill, { backgroundColor: t.kumkumSoft }]}><Text style={[st.pillTxt, { color: t.ink }]}>📲 Ask on WhatsApp</Text></Pressable>
+              <Pressable onPress={() => pickFiles(u.id, words)} accessibilityLabel={`Import voice notes for ${u.name}`}
+                style={[st.pill, { backgroundColor: t.turmericSoft }]}><Text style={[st.pillTxt, { color: t.ink }]}>⬆ Import notes</Text></Pressable>
+              <Pressable onPress={() => playUnit(u.id, words)} accessibilityLabel={`Play ${u.name} one by one`}
+                style={[st.pill, { backgroundColor: t.leafSoft }]}><Text style={[st.pillTxt, { color: t.ink }]}>{playingUnit === u.id ? '■ Stop' : '▶ Play all'}</Text></Pressable>
+            </View>
           </View>
           <View style={{ gap: 8 }}>
             {words.map((w) => {
@@ -335,6 +357,7 @@ const st = StyleSheet.create({
   label: { fontFamily: F.bold, fontSize: 15, marginTop: 14, color: '#7A8C84' },
   vrow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 2, borderRadius: 18, padding: 10 },
   tab: { flex: 1, alignItems: 'center', borderWidth: 2, borderRadius: 16, paddingVertical: 10 },
-  pill: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  pill: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  pillTxt: { fontFamily: F.bold, fontSize: 13 },
   mini: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
 });

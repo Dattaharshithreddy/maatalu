@@ -2,11 +2,14 @@
   "expo": {
     "name": "Maatalu",
     "slug": "maatalu",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.maatalu.app" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.maatalu.app"
+    },
     "android": {
       "package": "com.maatalu.app",
       "versionCode": 1,
@@ -18,10 +21,18 @@
       },
       "predictiveBackGestureEnabled": false
     },
-    "web": { "favicon": "./assets/favicon.png" },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
     "plugins": [
-      ["expo-audio", { "microphonePermission": "Maatalu uses the microphone so family members can record voice notes and word pronunciations." }],
-      "expo-font"
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Maatalu uses the microphone so family members can record voice notes and word pronunciations."
+        }
+      ],
+      "expo-font",
+      "expo-sharing"
     ]
   }
 }

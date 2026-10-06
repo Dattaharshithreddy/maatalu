@@ -21,8 +21,9 @@
 - Stars, daily streak, minutes tracking, quick review of known words
 - Ammamma (robot female voice) and Tatayya (robot male voice) say the words one by one; they take turns, or one teaches alone (Parents > Settings)
 - Real voices replace the robot per word: hold-to-record, or import voice-note files (matched to words in order, with preview and reorder)
-- Family tab: real voice-note recording and playback (child, grandma, grandpa), long-press to delete
-- Parents tab behind a grown-ups question: progress, weekly chart, words known, settings, erase all
+- Two tabs. Learn is for the child. For parents (behind a grown-ups question) holds setup, real voices and progress. Grandparents never need the app: WhatsApp carries their voice notes in
+- After each lesson the child records a short message and sends it to the grandparent through the phone's share sheet (WhatsApp)
+- Parents tab: progress, weekly chart, words known, settings, erase all
 - Free plan (3 units) and a Plus paywall (test mode, no payment taken)
 - Light and dark mode; progress and recordings saved on the phone
 

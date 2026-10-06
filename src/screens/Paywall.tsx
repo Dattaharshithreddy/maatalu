@@ -18,8 +18,8 @@ export default function Paywall({ onClose }: { onClose: () => void }) {
   const [plan, setPlan] = useState('year');
   const perks = [
     ['📚', `All ${UNITS.length} units: ${ALL_WORDS.length}+ words, the Telugu alphabet and real sentences`],
-    ['👵', `${s.profile?.gma}'s voice in every lesson`],
-    ['🎙️', 'Unlimited family voice notes'],
+    ['👵', `${s.profile?.gma} and ${s.profile?.gpa} teaching in their own real voices`],
+    ['📲', `Send ${s.profile?.gma} a voice note on WhatsApp after each lesson`],
     ['📈', 'Weekly progress for parents'],
   ];
   return (
