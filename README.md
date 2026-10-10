@@ -17,7 +17,7 @@
 
 ## What works
 - Onboarding: child's name, age, grandparents' names
-- 21 units, 199 items: everyday words, the Telugu alphabet and full sentences, taught in bite-sized lessons of 6
+- 119 units, about 1,250 items: ~940 everyday words, the Telugu alphabet and ~285 full sentences, taught in bite-sized lessons of 6
 - Stars, daily streak, minutes tracking, quick review of known words
 - Ammamma (robot female voice) and Tatayya (robot male voice) say the words one by one; they take turns, or one teaches alone (Parents > Settings)
 - Real voices replace the robot per word: hold-to-record, or import voice-note files (matched to words in order, with preview and reorder)

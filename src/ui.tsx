@@ -32,7 +32,7 @@ function colors(t: Theme, v: BtnProps['variant']) {
 }
 const b = StyleSheet.create({
   btn: { borderRadius: 16, paddingVertical: 13, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', borderWidth: 0 },
-  label: { fontFamily: F.bold, fontSize: 17 },
+  label: { fontFamily: F.bold, fontSize: 17, textAlign: 'center', flexShrink: 1 },
 });
 
 /** Muggulu-style dot grid, drawn behind the big Telugu letters. */

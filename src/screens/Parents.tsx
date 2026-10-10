@@ -64,7 +64,7 @@ export default function Parents({ openPaywall }: { openPaywall: () => void }) {
         <Card style={{ borderStyle: 'dashed' }}><Text style={{ fontFamily: F.body, color: t.muted, textAlign: 'center' }}>No words yet. The first lesson teaches five.</Text></Card>
       ) : (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          {known.map((w) => (
+          {known.slice(-120).map((w) => (
             <View key={w.id} style={[st.word, { backgroundColor: t.surface, borderColor: t.line }]}>
               <Text style={{ fontFamily: F.te, color: t.ink, fontSize: 18 }}>{w.te}</Text>
               <Text style={{ fontFamily: F.body, color: t.muted, fontSize: 12, marginTop: -4 }}>{w.en}</Text>
@@ -113,6 +113,7 @@ function VoicePack({ back }: { back: () => void }) {
   const [who, setWho] = useState<Speaker>('gma');
   const [active, setActive] = useState<string | null>(null);
   const [playingUnit, setPlayingUnit] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);   // only one unit's rows are drawn at a time, so long lists stay fast
   const stopSeq = React.useRef<null | (() => void)>(null);
   const [review, setReview] = useState<null | { unitId: string; targets: Word[]; files: PickedFile[] }>(null);
 
@@ -215,7 +216,11 @@ function VoicePack({ back }: { back: () => void }) {
       ) : units.map(({ u, words }) => (
         <View key={u.id}>
           <View style={{ marginTop: 20, marginBottom: 8 }}>
-            <Text style={{ fontFamily: F.te, fontSize: 20, color: t.ink }}>{u.name}</Text>
+            <Pressable onPress={() => setOpenId(openId === u.id ? null : u.id)} accessibilityRole="button" accessibilityLabel={`${openId === u.id ? 'Hide' : 'Show'} ${u.name}`}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontFamily: F.te, fontSize: 20, color: t.ink, flex: 1 }}>{u.name}</Text>
+              <Text style={{ fontFamily: F.body, color: t.muted, fontSize: 13 }}>{words.filter((w) => hasRealVoice(w, who, s.wordVoices)).length}/{words.length} {openId === u.id ? '▲' : '▼'}</Text>
+            </Pressable>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 }}>
               <Pressable onPress={() => askOnWhatsApp(u.name, words)} accessibilityLabel={`Ask ${name} on WhatsApp for ${u.name}`}
                 style={[st.pill, { backgroundColor: t.kumkumSoft }]}><Text style={[st.pillTxt, { color: t.ink }]}>📲 Ask on WhatsApp</Text></Pressable>
@@ -225,7 +230,7 @@ function VoicePack({ back }: { back: () => void }) {
                 style={[st.pill, { backgroundColor: t.leafSoft }]}><Text style={[st.pillTxt, { color: t.ink }]}>{playingUnit === u.id ? '■ Stop' : '▶ Play all'}</Text></Pressable>
             </View>
           </View>
-          <View style={{ gap: 8 }}>
+          {openId === u.id && <View style={{ gap: 8 }}>
             {words.map((w) => {
               const has = hasRealVoice(w, who, s.wordVoices), isRec = active === w.id && rec.recording;
               return (
@@ -252,7 +257,7 @@ function VoicePack({ back }: { back: () => void }) {
                 </View>
               );
             })}
-          </View>
+          </View>}
         </View>
       ))}
 

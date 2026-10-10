@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { F, useTheme } from '../theme';
 import { Btn, Chip, H2, Muggulu } from '../ui';
-import { LESSON_SIZE, UNITS } from '../content';
+import { LESSON_SIZE, UNITS, firstAkshara } from '../content';
 import { useStore } from '../store';
 
 type Props = { openUnit: (i: number) => void; openReview: () => void; openPaywall: () => void };
@@ -31,7 +31,7 @@ export default function Home({ openUnit, openReview, openPaywall }: Props) {
     <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingTop: ins.top + 12, paddingBottom: 120 }}>
       <View style={st.head}>
         <View style={{ flex: 1 }}>
-          <Text style={[st.hello, { color: t.ink }]} numberOfLines={1}>నమస్కారం, {p.child}!</Text>
+          <Text style={[st.hello, { color: t.ink }]} numberOfLines={2}>నమస్కారం, {p.child}!</Text>
           <Text style={{ fontFamily: F.body, color: t.muted }}>Ready for today's Telugu?</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -45,7 +45,7 @@ export default function Home({ openUnit, openReview, openPaywall }: Props) {
         {cur >= 0 ? (
           <>
             <Text style={[st.todayTitle, { color: t.onLeaf }]}>{UNITS[cur].name}</Text>
-            <Text style={[st.glyph, { color: t.turmeric }]}>{UNITS[cur].words[0].te.slice(0, 1)}</Text>
+            <Text style={[st.glyph, { color: t.turmeric }]}>{firstAkshara(UNITS[cur].words[0].te)}</Text>
             <Text style={[st.todaySub, { color: t.onLeaf }]}>{Math.min(LESSON_SIZE, size(cur) - count(cur))} new words, about 5 minutes. {count(cur)} of {size(cur)} done in this unit.</Text>
             <Btn label={needsPremium(cur) ? 'Unlock this unit' : count(cur) > 0 ? 'Continue lesson' : 'Start lesson'}
               onPress={() => tapUnit(cur)} style={{ alignSelf: 'flex-start' }} />

@@ -1,3 +1,5 @@
+import { MORE } from './content_more';
+
 export type Speaker = 'gma' | 'gpa';
 export type Teacher = 'both' | Speaker;
 export type Word = { id: string; te: string; tl: string; en: string; e: string };
@@ -36,9 +38,9 @@ export const UNITS: Unit[] = [
     ['అ', 'a', 'as in అమ్మ, mother', '👩'],
     ['ఆ', 'aa', 'as in ఆవు, cow', '🐄'],
     ['ఇ', 'i', 'as in ఇల్లు, house', '🏠'],
-    ['ఈ', 'ee', 'as in ఈగ, fly', '🪰'],
+    ['ఈ', 'ee', 'as in ఈగ, fly', '🦟'],
     ['ఉ', 'u', 'as in ఉల్లిపాయ, onion', '🧅'],
-    ['ఊ', 'oo', 'as in ఊయల, swing', '🛝'],
+    ['ఊ', 'oo', 'as in ఊయల, swing', '🎠'],
     ['ఎ', 'e', 'as in ఎలుక, mouse', '🐭'],
     ['ఏ', 'ae', 'as in ఏనుగు, elephant', '🐘'],
     ['ఐ', 'ai', 'as in ఐదు, five', '5️⃣'],
@@ -49,8 +51,8 @@ export const UNITS: Unit[] = [
   unit('food', 'Food at home', '🍚', [
     ['అన్నం', 'annam', 'Rice', '🍚'],
     ['పప్పు', 'pappu', 'Dal', '🥣'],
-    ['పెరుగు', 'perugu', 'Curd', '🫙'],
-    ['చపాతీ', 'chapaatee', 'Chapati', '🫓'],
+    ['పెరుగు', 'perugu', 'Curd', '🥛'],
+    ['చపాతీ', 'chapaatee', 'Chapati', '🥙'],
     ['దోసె', 'dose', 'Dosa', '🥞'],
     ['ఇడ్లీ', 'idlee', 'Idli', '🍘'],
     ['పాలు', 'paalu', 'Milk', '🥛'],
@@ -99,7 +101,7 @@ export const UNITS: Unit[] = [
     ['నీలం', 'neelam', 'Blue', '🔵'],
     ['తెలుపు', 'telupu', 'White', '⚪'],
     ['నలుపు', 'nalupu', 'Black', '⚫'],
-    ['గులాబీ రంగు', 'gulaabee rangu', 'Pink', '🩷'],
+    ['గులాబీ రంగు', 'gulaabee rangu', 'Pink', '💗'],
     ['నారింజ రంగు', 'naarinja rangu', 'Orange', '🟠'],
   ]),
   unit('body', 'My body', '🖐️', [
@@ -112,7 +114,7 @@ export const UNITS: Unit[] = [
     ['కాలు', 'kaalu', 'Leg', '🦵'],
     ['జుట్టు', 'juttu', 'Hair', '💇'],
     ['పళ్ళు', 'pallu', 'Teeth', '🦷'],
-    ['కడుపు', 'kadupu', 'Tummy', '🫃'],
+    ['కడుపు', 'kadupu', 'Tummy', '🤗'],
   ]),
   unit('house', 'In the house', '🏠', [
     ['ఇల్లు', 'illu', 'House', '🏠'],
@@ -123,7 +125,7 @@ export const UNITS: Unit[] = [
     ['గడియారం', 'gadiyaaram', 'Clock', '🕰️'],
     ['దీపం', 'deepam', 'Lamp', '🪔'],
     ['బొమ్మ', 'bomma', 'Toy', '🧸'],
-    ['కిటికీ', 'kitikee', 'Window', '🪟'],
+    ['కిటికీ', 'kitikee', 'Window', '🖼️'],
     ['గిన్నె', 'ginne', 'Bowl', '🥣'],
   ]),
   unit('consonants', 'Letters: first sounds', '✍️', [
@@ -146,7 +148,7 @@ export const UNITS: Unit[] = [
     ['కోపం', 'kopam', 'Angry', '😠'],
     ['భయం', 'bhayam', 'Scared', '😨'],
     ['ఆకలి', 'aakali', 'Hungry', '🤤'],
-    ['దాహం', 'daaham', 'Thirsty', '🫗'],
+    ['దాహం', 'daaham', 'Thirsty', '🥤'],
     ['నిద్ర', 'nidra', 'Sleepy', '😪'],
     ['ప్రేమ', 'prema', 'Love', '❤️'],
   ]),
@@ -180,7 +182,7 @@ export const UNITS: Unit[] = [
     ['వంకాయ', 'vankaaya', 'Brinjal', '🍆'],
     ['మిరపకాయ', 'mirapakaaya', 'Chilli', '🌶️'],
     ['దోసకాయ', 'dosakaaya', 'Cucumber', '🥒'],
-    ['బెండకాయ', 'bendakaaya', 'Okra', '🫛'],
+    ['బెండకాయ', 'bendakaaya', 'Okra', '🌿'],
   ]),
   unit('nature', 'Outside', '🌳', [
     ['సూర్యుడు', 'sooryudu', 'Sun', '☀️'],
@@ -198,7 +200,7 @@ export const UNITS: Unit[] = [
     ['చొక్కా', 'chokkaa', 'Shirt', '👕'],
     ['లంగా', 'langaa', 'Long skirt', '👗'],
     ['చీర', 'cheera', 'Saree', '🥻'],
-    ['చెప్పులు', 'cheppulu', 'Slippers', '🩴'],
+    ['చెప్పులు', 'cheppulu', 'Slippers', '👡'],
     ['టోపీ', 'topee', 'Cap', '🧢'],
     ['కళ్ళద్దాలు', 'kalladdaalu', 'Glasses', '👓'],
   ]),
@@ -253,11 +255,28 @@ export const UNITS: Unit[] = [
     ['ఇక్కడికి రా', 'ikkadiki raa', 'Come here', '👋'],
     ['చాలా బాగుంది', 'chaalaa baagundi', 'Very nice', '🌟'],
   ], false, 'sentences'),
+  ...MORE.map((m) => unit(m.id, m.name, m.icon, m.rows, false, m.kind)),
 ];
 
 export const ALL_WORDS: Word[] = UNITS.flatMap((u) => u.words);
-export const unitOf = (w: Word): Unit => UNITS.find((u) => u.words.some((x) => x.id === w.id))!;
+const UNIT_OF: Record<string, Unit> = {};
+for (const u of UNITS) for (const w of u.words) UNIT_OF[w.id] = u;
+export const unitOf = (w: Word): Unit => UNIT_OF[w.id];
 export const isLetter = (w: Word) => unitOf(w).kind === 'letters';
+export const isSentence = (w: Word) => unitOf(w).kind === 'sentences';
+export const kindOf = (w: Word): 'letters' | 'sentences' | 'words' => unitOf(w).kind || 'words';
+
+/** The first whole Telugu letter of a word (a consonant with its vowel sign, or a conjunct like ప్ర). */
+export const firstAkshara = (te: string): string => {
+  const mark = (c: string) => (c >= '\u0C01' && c <= '\u0C03') || (c >= '\u0C3E' && c <= '\u0C56');
+  let i = 1;
+  while (i < te.length) {
+    if (mark(te[i])) { i += 1; continue; }
+    if (te[i - 1] === '\u0C4D' && te[i] >= '\u0C15' && te[i] <= '\u0C39') { i += 1; continue; }
+    break;
+  }
+  return te.slice(0, i);
+};
 export const LESSON_SIZE = 6;
 export const shuffle = <T,>(a: T[]): T[] => [...a].sort(() => Math.random() - 0.5);
 

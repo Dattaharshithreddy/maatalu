@@ -1,23 +1,38 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 import { F, useTheme } from '../theme';
 import { Btn, Muggulu, SpeakWave, whoEmoji, whoName } from '../ui';
-import { ALL_WORDS, LESSON_SIZE, UNITS, Word, isLetter, shuffle, speakerFor } from '../content';
+import { ALL_WORDS, LESSON_SIZE, UNITS, Word, isLetter, isSentence, kindOf, shuffle, speakerFor } from '../content';
 import { useStore } from '../store';
 import { hasRealVoice, hasTeluguVoice, playWord, stopAll, useVoiceRecorder } from '../audio';
+
+/** Big Telugu text shrinks in steps for longer words and sentences, and wraps instead of being cut off. */
+const glyphSize = (te: string) => {
+  const n = te.length;
+  if (n <= 6) return { fontSize: 64, lineHeight: 92 };
+  if (n <= 11) return { fontSize: 48, lineHeight: 70 };
+  if (n <= 18) return { fontSize: 38, lineHeight: 56 };
+  return { fontSize: 30, lineHeight: 46 };
+};
 
 export type LessonMode = { kind: 'unit'; index: number } | { kind: 'review' };
 type Step = { t: 'learn'; w: Word } | { t: 'meaning'; w: Word; opts: Word[] } | { t: 'listen'; w: Word; opts: Word[] } | { t: 'win' };
 
 function buildSteps(mode: LessonMode, learned: string[]): Step[] {
-  // Options come from the same kind of item: letters with letters, words with words.
+  // Options come from the same kind of item (letters, words or sentences) and never share a meaning or a picture with the answer.
   const opts = (w: Word, pool: Word[]) => {
-    const same = pool.filter((x) => x.id !== w.id && isLetter(x) === isLetter(w));
-    const extra = ALL_WORDS.filter((x) => x.id !== w.id && isLetter(x) === isLetter(w) && !same.includes(x));
-    return shuffle([w, ...shuffle(same).slice(0, 2), ...shuffle(extra)].slice(0, 3));
+    const ok = (x: Word) => x.id !== w.id && kindOf(x) === kindOf(w) && x.en !== w.en && (kindOf(w) !== 'words' || x.e !== w.e);
+    const same = pool.filter(ok);
+    const extra = shuffle(ALL_WORDS.filter((x) => ok(x) && !same.includes(x))).slice(0, 8);
+    const picks: Word[] = [];
+    for (const x of [...shuffle(same), ...extra]) {
+      if (picks.length === 2) break;
+      if (picks.every((y) => y.en !== x.en && (kindOf(w) !== 'words' || y.e !== x.e))) picks.push(x);
+    }
+    return shuffle([w, ...picks]);
   };
   const quizFor = (w: Word, pool: Word[], i: number): Step =>
     isLetter(w) || i % 2 ? { t: 'listen', w, opts: opts(w, pool) } : { t: 'meaning', w, opts: opts(w, pool) };
@@ -101,6 +116,19 @@ export default function Lesson({ mode, onClose }: { mode: LessonMode; onClose: (
   const who = step.t !== 'win' ? speakerFor(step.w, s.teacher) : 'gma';
   const real = step.t !== 'win' && hasRealVoice(step.w, who, s.wordVoices);
 
+  const optRow = (o: Word) => {
+    const step_ = step as { w: Word };
+    const isRight = picked && o.id === step_.w.id, isWrong = picked === o.id && o.id !== step_.w.id;
+    return (
+      <Pressable key={o.id} onPress={() => choose(o)} accessibilityRole="button" accessibilityLabel={o.en}
+        style={[st.opt, { backgroundColor: isRight ? t.leafSoft : isWrong ? t.kumkumSoft : t.surface,
+          borderColor: isRight ? t.leaf : isWrong ? t.kumkum : t.line }]}>
+        <Text style={st.optEmoji}>{o.e}</Text>
+        <Text style={[st.optTxt, { color: t.ink }]}>{o.en}</Text>
+      </Pressable>
+    );
+  };
+
   return (
     <View style={[st.wrap, { backgroundColor: t.bg, paddingTop: ins.top + 10, paddingBottom: ins.bottom + 16 }]}>
       <View style={st.head}>
@@ -110,7 +138,7 @@ export default function Lesson({ mode, onClose }: { mode: LessonMode; onClose: (
         </View>
       </View>
 
-      <View style={st.stage}>
+      <ScrollView style={st.stageWrap} contentContainerStyle={st.stage} showsVerticalScrollIndicator={false}>
         {step.t === 'learn' && (
           <>
             <View style={[st.who, { backgroundColor: who === 'gma' ? t.kumkumSoft : t.leafSoft }]}>
@@ -126,7 +154,7 @@ export default function Lesson({ mode, onClose }: { mode: LessonMode; onClose: (
             <View style={[st.card, { backgroundColor: t.surface, borderColor: t.line, marginTop: 12 }]}>
               <Muggulu color={t.dot} size={260} />
               <Text style={{ fontSize: 60, textAlign: 'center' }}>{step.w.e}</Text>
-              <Text style={[st.glyph, { color: t.leaf }, step.w.te.length > 10 && st.glyphLong]} adjustsFontSizeToFit numberOfLines={2}>{step.w.te}</Text>
+              <Text style={[st.glyph, { color: t.leaf }, glyphSize(step.w.te)]}>{step.w.te}</Text>
               <Text style={[st.tl, { color: t.ink }]}>{step.w.tl}</Text>
               <Text style={[st.en, { color: t.muted }]}>{step.w.en}</Text>
               <Btn variant="ghost" label={`🔊 Hear ${whoName(who, p)} again`} onPress={() => say(step.w)} style={{ marginTop: 16, alignSelf: 'center' }} />
@@ -140,45 +168,40 @@ export default function Lesson({ mode, onClose }: { mode: LessonMode; onClose: (
             <Text style={[st.q, { color: t.muted }]}>What does this mean?</Text>
             <View style={[st.card, { backgroundColor: t.surface, borderColor: t.line }]}>
               <Muggulu color={t.dot} size={200} />
-              <Text style={[st.glyph, { color: t.leaf }, step.w.te.length > 10 && st.glyphLong]} adjustsFontSizeToFit numberOfLines={2}>{step.w.te}</Text>
+              <Text style={[st.glyph, { color: t.leaf }, glyphSize(step.w.te)]}>{step.w.te}</Text>
               <Btn variant="ghost" label="🔊 Hear it" onPress={() => say(step.w)} style={{ marginTop: 8, alignSelf: 'center' }} />
             </View>
-            <View style={{ gap: 10, marginTop: 16, alignSelf: 'stretch' }}>
-              {step.opts.map((o) => {
-                const isRight = picked && o.id === step.w.id, isWrong = picked === o.id && o.id !== step.w.id;
-                return (
-                  <Pressable key={o.id} onPress={() => choose(o)} accessibilityRole="button" accessibilityLabel={o.en}
-                    style={[st.opt, { backgroundColor: isRight ? t.leafSoft : isWrong ? t.kumkumSoft : t.surface,
-                      borderColor: isRight ? t.leaf : isWrong ? t.kumkum : t.line }]}>
-                    <Text style={{ fontSize: 28 }}>{o.e}</Text>
-                    <Text style={[st.optTxt, { color: t.ink }]}>{o.en}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <View style={{ gap: 10, marginTop: 16, alignSelf: 'stretch' }}>{step.opts.map(optRow)}</View>
           </>
         )}
 
         {step.t === 'listen' && (
           <>
-            <Text style={[st.q, { color: t.muted }]}>{isLetter(step.w) ? 'Listen, then tap the letter' : 'Listen, then tap the picture'}</Text>
+            <Text style={[st.q, { color: t.muted }]}>{isLetter(step.w) ? 'Listen, then tap the letter' : isSentence(step.w) ? 'Listen, then tap what it means' : 'Listen, then tap what you heard'}</Text>
             <Pressable onPress={() => say(step.w)} accessibilityLabel="Play the word again"
               style={[st.listen, { backgroundColor: t.leaf }]}><Text style={{ fontSize: 48 }}>🔊</Text></Pressable>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 24 }}>
-              {step.opts.map((o) => {
-                const isRight = picked && o.id === step.w.id, isWrong = picked === o.id && o.id !== step.w.id;
-                return (
-                  <Pressable key={o.id} onPress={() => choose(o)} accessibilityRole="button" accessibilityLabel={o.en}
-                    style={[st.tile, { backgroundColor: isRight ? t.leafSoft : isWrong ? t.kumkumSoft : t.surface,
-                      borderColor: isRight ? t.leaf : isWrong ? t.kumkum : t.line }]}>
-                    {isLetter(o)
-                      ? <Text style={[st.tileGlyph, { color: t.leaf }]}>{o.te}</Text>
-                      : <Text style={{ fontSize: 46 }}>{o.e}</Text>}
-                    {picked && !isLetter(o) && <Text style={[st.tileTxt, { color: t.ink }]}>{o.te}</Text>}
-                  </Pressable>
-                );
-              })}
-            </View>
+            {isSentence(step.w) ? (
+              <View style={{ gap: 10, marginTop: 20, alignSelf: 'stretch' }}>{step.opts.map(optRow)}</View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 24, alignSelf: 'stretch' }}>
+                {step.opts.map((o) => {
+                  const isRight = picked && o.id === step.w.id, isWrong = picked === o.id && o.id !== step.w.id;
+                  return (
+                    <Pressable key={o.id} onPress={() => choose(o)} accessibilityRole="button" accessibilityLabel={o.en}
+                      style={[st.tile, { backgroundColor: isRight ? t.leafSoft : isWrong ? t.kumkumSoft : t.surface,
+                        borderColor: isRight ? t.leaf : isWrong ? t.kumkum : t.line }]}>
+                      {isLetter(o)
+                        ? <Text style={[st.tileGlyph, { color: t.leaf }]}>{o.te}</Text>
+                        : <>
+                            <Text style={{ fontSize: 40 }}>{o.e}</Text>
+                            <Text style={[st.tileEn, { color: t.ink }]}>{o.en}</Text>
+                          </>}
+                      {picked && !isLetter(o) && <Text style={[st.tileTxt, { color: t.leaf }]}>{o.te}</Text>}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
           </>
         )}
 
@@ -192,7 +215,7 @@ export default function Lesson({ mode, onClose }: { mode: LessonMode; onClose: (
             <Text style={[st.tl, { color: t.ink, marginTop: 10 }]}>+{result.stars} stars, 🔥 {result.streak} day streak</Text>
           </View>
         )}
-      </View>
+      </ScrollView>
 
       {step.t === 'learn' && <Btn label="Got it" onPress={next} />}
       {(step.t === 'meaning' || step.t === 'listen') && <Btn label="Next" disabled={!picked} onPress={next} />}
@@ -213,17 +236,19 @@ const st = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: 18 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   bar: { flex: 1, height: 14, borderRadius: 9, overflow: 'hidden' },
-  stage: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  stageWrap: { flex: 1, alignSelf: 'stretch' },
+  stage: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 8 },
   card: { alignSelf: 'stretch', borderWidth: 2, borderRadius: 30, paddingVertical: 26, paddingHorizontal: 18, overflow: 'hidden' },
   glyph: { fontFamily: F.teHeavy, fontSize: 64, lineHeight: 92, textAlign: 'center' },
-  glyphLong: { fontSize: 40, lineHeight: 60 },
-  tl: { fontFamily: F.bold, fontSize: 20, textAlign: 'center' },
+  tl: { fontFamily: F.bold, fontSize: 20, textAlign: 'center', marginTop: 4 },
   en: { fontFamily: F.body, fontSize: 17, textAlign: 'center' },
   q: { fontFamily: F.bold, fontSize: 16, marginBottom: 10 },
   opt: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 2, borderBottomWidth: 5, borderRadius: 18, padding: 12 },
-  optTxt: { fontFamily: F.bold, fontSize: 18 },
+  optEmoji: { fontSize: 28, width: 40, textAlign: 'center' },
+  optTxt: { fontFamily: F.bold, fontSize: 18, flex: 1, flexShrink: 1 },
   listen: { width: 130, height: 130, borderRadius: 65, alignItems: 'center', justifyContent: 'center' },
-  tile: { flex: 1, aspectRatio: 0.85, borderWidth: 2, borderBottomWidth: 5, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  tile: { flex: 1, minHeight: 150, borderWidth: 2, borderBottomWidth: 5, borderRadius: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6, paddingVertical: 10 },
+  tileEn: { fontFamily: F.bold, fontSize: 15, textAlign: 'center', marginTop: 6 },
   tileTxt: { fontFamily: F.te, fontSize: 15, marginTop: 4, textAlign: 'center' },
   who: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 20, padding: 10 },
   whoAv: { width: 44, height: 44, borderRadius: 22, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
