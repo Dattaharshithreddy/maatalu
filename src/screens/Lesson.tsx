@@ -9,13 +9,14 @@ import { ALL_WORDS, LESSON_SIZE, UNITS, Word, isLetter, isSentence, kindOf, shuf
 import { useStore } from '../store';
 import { hasRealVoice, hasTeluguVoice, playWord, stopAll, useVoiceRecorder } from '../audio';
 
-/** Big Telugu text shrinks in steps for longer words and sentences, and wraps instead of being cut off. */
+/** Big Telugu text shrinks in steps for longer words and sentences, and wraps instead of being cut off.
+ *  No lineHeight on purpose: the Telugu font is very tall, and a smaller lineHeight makes Android cut off the vowel marks on top. */
 const glyphSize = (te: string) => {
   const n = te.length;
-  if (n <= 6) return { fontSize: 64, lineHeight: 92 };
-  if (n <= 11) return { fontSize: 48, lineHeight: 70 };
-  if (n <= 18) return { fontSize: 38, lineHeight: 56 };
-  return { fontSize: 30, lineHeight: 46 };
+  if (n <= 6) return { fontSize: 58 };
+  if (n <= 11) return { fontSize: 46 };
+  if (n <= 18) return { fontSize: 36 };
+  return { fontSize: 28 };
 };
 
 export type LessonMode = { kind: 'unit'; index: number } | { kind: 'review' };
@@ -239,7 +240,7 @@ const st = StyleSheet.create({
   stageWrap: { flex: 1, alignSelf: 'stretch' },
   stage: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 8 },
   card: { alignSelf: 'stretch', borderWidth: 2, borderRadius: 30, paddingVertical: 26, paddingHorizontal: 18, overflow: 'hidden' },
-  glyph: { fontFamily: F.teHeavy, fontSize: 64, lineHeight: 92, textAlign: 'center' },
+  glyph: { fontFamily: F.teHeavy, fontSize: 64, textAlign: 'center' },
   tl: { fontFamily: F.bold, fontSize: 20, textAlign: 'center', marginTop: 4 },
   en: { fontFamily: F.body, fontSize: 17, textAlign: 'center' },
   q: { fontFamily: F.bold, fontSize: 16, marginBottom: 10 },
@@ -252,6 +253,6 @@ const st = StyleSheet.create({
   tileTxt: { fontFamily: F.te, fontSize: 15, marginTop: 4, textAlign: 'center' },
   who: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 20, padding: 10 },
   whoAv: { width: 44, height: 44, borderRadius: 22, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
-  tileGlyph: { fontFamily: F.teHeavy, fontSize: 52, lineHeight: 74 },
-  winTitle: { fontFamily: F.teHeavy, fontSize: 38, lineHeight: 56, marginTop: 6 },
+  tileGlyph: { fontFamily: F.teHeavy, fontSize: 52 },
+  winTitle: { fontFamily: F.teHeavy, fontSize: 38, marginTop: 6 },
 });

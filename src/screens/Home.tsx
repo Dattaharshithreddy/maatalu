@@ -96,10 +96,10 @@ export default function Home({ openUnit, openReview, openPaywall }: Props) {
 }
 const st = StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
-  hello: { fontFamily: F.teHeavy, fontSize: 28, lineHeight: 40 },
+  hello: { fontFamily: F.teHeavy, fontSize: 28 },
   today: { borderRadius: 28, padding: 22, overflow: 'hidden' },
   todayTitle: { fontFamily: F.bold, fontSize: 20 },
-  glyph: { fontFamily: F.teHeavy, fontSize: 68, lineHeight: 92 },
+  glyph: { fontFamily: F.teHeavy, fontSize: 68 },
   todaySub: { fontFamily: F.body, opacity: 0.9, marginBottom: 14 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 22, padding: 14, marginTop: 14 },
   rowTitle: { fontFamily: F.bold, fontSize: 17 },

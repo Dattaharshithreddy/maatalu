@@ -62,7 +62,7 @@ export default function Paywall({ onClose }: { onClose: () => void }) {
 }
 const st = StyleSheet.create({
   hero: { borderRadius: 28, paddingVertical: 34, paddingHorizontal: 20, alignItems: 'center', overflow: 'hidden', marginTop: 8 },
-  logo: { fontFamily: F.teHeavy, fontSize: 40, lineHeight: 58 },
+  logo: { fontFamily: F.teHeavy, fontSize: 40 },
   sub: { fontFamily: F.bold, color: '#fff', fontSize: 17, textAlign: 'center' },
   plan: { flexDirection: 'row', alignItems: 'center', borderWidth: 2, borderRadius: 18, padding: 14 },
 });

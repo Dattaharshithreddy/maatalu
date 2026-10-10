@@ -62,7 +62,7 @@ export default function Onboarding() {
 }
 const st = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: 24 },
-  logo: { fontFamily: F.teHeavy, fontSize: 84, textAlign: 'center', lineHeight: 110 },
+  logo: { fontFamily: F.teHeavy, fontSize: 84, textAlign: 'center' },
   brand: { fontFamily: F.bold, fontSize: 22, color: '#fff', textAlign: 'center', marginTop: -6 },
   pitch: { fontFamily: F.body, fontSize: 18, color: '#fff', textAlign: 'center', marginTop: 18, lineHeight: 26, opacity: 0.92 },
   title: { fontFamily: F.te, fontSize: 28, marginBottom: 6 },

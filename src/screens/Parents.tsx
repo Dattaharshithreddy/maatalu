@@ -351,10 +351,10 @@ function Settings({ back, openPaywall }: { back: () => void; openPaywall: () => 
 }
 
 const st = StyleSheet.create({
-  title: { fontFamily: F.teHeavy, fontSize: 28, lineHeight: 40, marginTop: 6 },
+  title: { fontFamily: F.teHeavy, fontSize: 28, marginTop: 6 },
   stats: { flexDirection: 'row', gap: 10, marginTop: 10 },
   stat: { flex: 1, borderWidth: 2, borderRadius: 20, paddingVertical: 12, alignItems: 'center' },
-  statN: { fontFamily: F.teHeavy, fontSize: 32, lineHeight: 44 },
+  statN: { fontFamily: F.teHeavy, fontSize: 32 },
   week: { flexDirection: 'row', gap: 10, height: 140, borderWidth: 2, borderRadius: 20, padding: 14 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 22, padding: 14 },
   word: { borderWidth: 2, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 4 },
