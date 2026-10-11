@@ -1,16 +1,22 @@
-// Which Google Chirp 3 HD voice speaks for each character. Change a name or speed here and
-// re-run the "Generate story voices" workflow to re-record just that character's lines.
-// Female voices: Achernar, Aoede, Autonoe, Callirrhoe, Despina, Erinome, Gacrux, Kore, Laomedeia, Leda,
-//   Pulcherrima, Sulafat, Vindemiatrix, Zephyr
-// Male voices: Achird, Algenib, Algieba, Alnilam, Charon, Enceladus, Fenrir, Iapetus, Orus, Puck,
-//   Rasalgethi, Sadachbia, Sadaltager, Schedar, Umbriel, Zubenelgenubi
+// Which Sarvam Bulbul v3 speaker voices each character. Change a speaker or pace here and re-run the
+// "Generate story voices" workflow: only that character's lines are re-recorded.
+// To choose by ear, listen to tools/voice/samples/<speaker>.mp3 (one sample per speaker, made on the first run).
 export const LANGUAGE = 'te-IN';
+export const MODEL = 'bulbul:v3';
+
 export const VOICES = {
-  ammamma: { voice: 'Gacrux', rate: 0.88 },
-  tatayya: { voice: 'Algenib', rate: 0.85 },
-  amma: { voice: 'Sulafat', rate: 0.95 },
-  nanna: { voice: 'Achird', rate: 0.95 },
-  // Children: Google has no child voices, so both use light, youthful voices (as cartoons often do).
-  boy: { voice: 'Laomedeia', rate: 1.0 },
-  girl: { voice: 'Leda', rate: 1.0 },
+  ammamma: { speaker: 'kavitha', pace: 0.9 },
+  tatayya: { speaker: 'ratan', pace: 0.88 },
+  amma: { speaker: 'roopa', pace: 1.0 },
+  nanna: { speaker: 'anand', pace: 1.0 },
+  boy: { speaker: 'aayan', pace: 1.05 },
+  girl: { speaker: 'suhani', pace: 1.05 },
 };
+
+// Every Bulbul v3 speaker, for the sample files.
+export const ALL_SPEAKERS = [
+  'shubh', 'aditya', 'ritu', 'priya', 'neha', 'rahul', 'pooja', 'rohan', 'simran', 'kavya', 'amit', 'dev', 'ishita',
+  'shreya', 'ratan', 'varun', 'manan', 'sumit', 'roopa', 'kabir', 'aayan', 'ashutosh', 'advait', 'anand', 'tanya',
+  'tarun', 'sunny', 'mani', 'gokul', 'vijay', 'shruti', 'suhani', 'mohit', 'kavitha', 'rehan', 'soham', 'rupali',
+];
+export const SAMPLE_TEXT = 'నమస్కారం! అన్నం తిన్నావా? రా, మనం కలిసి ఆడుకుందాం.';

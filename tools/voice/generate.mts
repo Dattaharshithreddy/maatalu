@@ -1,21 +1,23 @@
-// Records every story line with Google Cloud Text-to-Speech (Chirp 3 HD) and writes
+// Records every story line with Sarvam AI text-to-speech (Bulbul v3) and writes
 // assets/voices/*.mp3 plus src/stories/voices.ts, which maps each line to its recording.
+// Also makes tools/voice/samples/<speaker>.mp3 so voices can be chosen by ear.
 //
-// Run: GOOGLE_TTS_API_KEY=... node --experimental-strip-types tools/voice/generate.mts
+// Run: SARVAM_API_KEY=... node --experimental-strip-types tools/voice/generate.mts
 //      DRY_RUN=1 node --experimental-strip-types tools/voice/generate.mts   (lists lines, no API calls)
-// Only lines without a recording are sent to Google, so re-runs are cheap.
+// Only lines without a recording are sent to Sarvam, so re-runs are cheap.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CHAPTERS, personalise } from '../../src/stories/scenes.ts';
-import { LANGUAGE, VOICES } from './config.mjs';
+import { ALL_SPEAKERS, LANGUAGE, MODEL, SAMPLE_TEXT, VOICES } from './config.mjs';
 
 type Role = keyof typeof VOICES;
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT = join(ROOT, 'assets', 'voices');
 const MAP = join(ROOT, 'src', 'stories', 'voices.ts');
-const KEY = process.env.GOOGLE_TTS_API_KEY;
+const SAMPLES = join(ROOT, 'tools', 'voice', 'samples');
+const KEY = process.env.SARVAM_API_KEY;
 const DRY = !!process.env.DRY_RUN;
 
 // Every (character voice, spoken text) the app can play.
@@ -30,39 +32,43 @@ for (const ch of CHAPTERS) for (const sc of ch.scenes) for (const l of sc.lines)
 
 const fileFor = (role: Role, text: string) => {
   const v = VOICES[role];
-  const h = createHash('sha1').update(`${LANGUAGE}|${v.voice}|${v.rate}|${text}`).digest('hex').slice(0, 16);
+  const h = createHash('sha1').update(`${MODEL}|${LANGUAGE}|${v.speaker}|${v.pace}|${text}`).digest('hex').slice(0, 16);
   return `${role}-${h}.mp3`;
 };
 
-async function synth(role: Role, text: string): Promise<Buffer> {
-  const v = VOICES[role];
-  const body = {
-    input: { text },
-    voice: { languageCode: LANGUAGE, name: `${LANGUAGE}-Chirp3-HD-${v.voice}` },
-    audioConfig: { audioEncoding: 'MP3', speakingRate: v.rate },
-  };
+async function tts(speaker: string, pace: number, text: string): Promise<Buffer> {
+  const body = { text, language_code: LANGUAGE, model: MODEL, speaker, pace, output_audio_codec: 'mp3', speech_sample_rate: 24000 };
   for (let attempt = 1; ; attempt++) {
-    const res = await fetch(`https://texttospeech.googleapis.com/v1/text:synthesize?key=${KEY}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    const res = await fetch('https://api.sarvam.ai/text-to-speech', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'api-subscription-key': KEY! }, body: JSON.stringify(body),
     });
-    if (res.ok) return Buffer.from(((await res.json()) as { audioContent: string }).audioContent, 'base64');
+    if (res.ok) return Buffer.from(((await res.json()) as { audios: string[] }).audios[0], 'base64');
     const msg = await res.text();
-    if (attempt >= 4 || (res.status < 500 && res.status !== 429)) throw new Error(`Google TTS ${res.status} for "${text}": ${msg}`);
-    await new Promise((r) => setTimeout(r, 2000 * attempt));
+    if (attempt >= 5 || (res.status < 500 && res.status !== 429)) throw new Error(`Sarvam ${res.status} for "${text}": ${msg}`);
+    await new Promise((r) => setTimeout(r, 3000 * attempt));
   }
 }
+const synth = (role: Role, text: string) => tts(VOICES[role].speaker, VOICES[role].pace, text);
 
 async function main() {
   const chars = [...items.values()].reduce((a, i) => a + i.text.length, 0);
   console.log(`${items.size} recordings, ${chars} characters in total`);
   if (DRY) { for (const [k] of [...items].slice(0, 8)) console.log('  ', k); return; }
-  if (!KEY) throw new Error('GOOGLE_TTS_API_KEY is not set. Add it under GitHub > Settings > Secrets and variables > Actions.');
+  if (!KEY) throw new Error('SARVAM_API_KEY is not set. Add it under GitHub > Settings > Secrets and variables > Actions.');
   mkdirSync(OUT, { recursive: true });
+
+  // One short sample per speaker, made once, for choosing voices by ear.
+  mkdirSync(SAMPLES, { recursive: true });
+  for (const sp of ALL_SPEAKERS) {
+    const f = join(SAMPLES, `${sp}.mp3`);
+    if (!existsSync(f)) writeFileSync(f, await tts(sp, 1.0, SAMPLE_TEXT));
+  }
+  console.log(`Samples ready for ${ALL_SPEAKERS.length} speakers in tools/voice/samples`);
 
   const todo = [...items.values()].filter((i) => !existsSync(join(OUT, fileFor(i.role, i.text))));
   console.log(`${todo.length} new recordings to make`);
   let done = 0, sent = 0;
-  const workers = Array.from({ length: 4 }, async () => {
+  const workers = Array.from({ length: 2 }, async () => {
     for (;;) {
       const i = todo.shift();
       if (!i) return;
@@ -72,7 +78,7 @@ async function main() {
     }
   });
   await Promise.all(workers);
-  console.log(`Made ${done} recordings (${sent} characters sent to Google)`);
+  console.log(`Made ${done} recordings (${sent} characters sent to Sarvam)`);
 
   // Remove recordings no line uses any more, then write the map the app reads.
   const keep = new Set([...items.values()].map((i) => fileFor(i.role, i.text)));

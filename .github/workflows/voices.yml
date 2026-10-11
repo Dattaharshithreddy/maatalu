@@ -1,7 +1,7 @@
 name: Generate story voices
 
-# Records every story line with Google Cloud Text-to-Speech, commits the audio, then builds a new APK.
-# Needs the repository secret GOOGLE_TTS_API_KEY. Runs by hand, or when the story scripts or voice settings change.
+# Records every story line with Sarvam AI text-to-speech, commits the audio, then builds a new APK.
+# Needs the repository secret SARVAM_API_KEY. Runs by hand, or when the story scripts or voice settings change.
 on:
   workflow_dispatch:
   push:
@@ -31,22 +31,22 @@ jobs:
 
       - name: Check the API key is set
         env:
-          GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+          SARVAM_API_KEY: ${{ secrets.SARVAM_API_KEY }}
         run: |
-          if [ -z "$GOOGLE_TTS_API_KEY" ]; then
-            echo "::error::Add your Google Cloud API key as the repository secret GOOGLE_TTS_API_KEY (Settings > Secrets and variables > Actions)."
+          if [ -z "$SARVAM_API_KEY" ]; then
+            echo "::error::Add your Sarvam API key as the repository secret SARVAM_API_KEY (Settings > Secrets and variables > Actions)."
             exit 1
           fi
 
       - name: Record story lines
         env:
-          GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+          SARVAM_API_KEY: ${{ secrets.SARVAM_API_KEY }}
         run: node --experimental-strip-types tools/voice/generate.mts
 
       - name: Commit recordings
         id: commit
         run: |
-          git add assets/voices src/stories/voices.ts
+          git add assets/voices src/stories/voices.ts tools/voice/samples
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No new recordings."
