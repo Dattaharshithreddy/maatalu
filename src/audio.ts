@@ -60,6 +60,48 @@ export function speakAs(text: string, who: Speaker, onEnd?: () => void) {
   });
 }
 
+export type Role = 'ammamma' | 'tatayya' | 'amma' | 'nanna' | 'boy' | 'girl';
+
+/** Robot voices for the story characters. Women and children use the female voice, men the male one. */
+const ROLE: Record<Role, { v: Speaker; pitch: () => number; rate: number }> = {
+  ammamma: { v: 'gma', pitch: () => PROFILE('gma').pitch, rate: 0.82 },
+  tatayya: { v: 'gpa', pitch: () => PROFILE('gpa').pitch, rate: 0.78 },
+  amma: { v: 'gma', pitch: () => (distinct ? 1.15 : 1.35), rate: 0.9 },
+  nanna: { v: 'gpa', pitch: () => (distinct ? 1.0 : 0.88), rate: 0.88 },
+  boy: { v: 'gma', pitch: () => 1.45, rate: 0.95 },
+  girl: { v: 'gma', pitch: () => 1.65, rate: 0.95 },
+};
+
+/**
+ * Says a story line in the character's robot voice. Calls onStart when sound begins and onEnd when it stops.
+ * With no Telugu voice on the phone it stays silent for about as long as the line would take, so the
+ * characters still "talk" and the scene keeps moving.
+ */
+export function speakRole(text: string, role: Role, onStart?: () => void, onEnd?: () => void) {
+  stopAll();
+  const r = ROLE[role];
+  let ended = false;
+  const end = () => { if (!ended) { ended = true; onEnd?.(); } };
+  if (voiceChecked && !haveTelugu) {
+    onStart?.();
+    const t = setTimeout(end, 700 + text.length * 75);
+    return () => { clearTimeout(t); end(); };
+  }
+  const startedAt = Date.now();
+  Speech.speak(text, {
+    language: 'te-IN', voice: voiceId[r.v], pitch: r.pitch(), rate: r.rate,
+    onStart: () => onStart?.(),
+    onDone: () => {
+      // Some engines finish instantly when they cannot speak Telugu: keep the mouth moving a moment.
+      const left = 600 + text.length * 60 - (Date.now() - startedAt);
+      if (left > 300 && Date.now() - startedAt < 400) setTimeout(end, left); else end();
+    },
+    onStopped: end,
+    onError: () => { onStart?.(); setTimeout(end, 700 + text.length * 75); },
+  });
+  return () => { Speech.stop(); end(); };
+}
+
 export function playUri(uri: string, onEnd?: () => void) {
   stopAll();
   try {

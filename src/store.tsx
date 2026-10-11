@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { deleteVoiceFile } from './audio';
 import type { Speaker, Teacher } from './content';
 
-export type Profile = { child: string; age: '4-6' | '7-9' | '10-12'; gma: string; gpa: string };
+export type Profile = { child: string; age: '4-6' | '7-9' | '10-12'; gma: string; gpa: string; kid?: 'boy' | 'girl' };
 export type State = {
   profile: Profile | null;
   stars: number;
@@ -14,9 +14,10 @@ export type State = {
   premium: boolean;
   wordVoices: Record<string, Partial<Record<Speaker, string>>>;
   teacher: Teacher;
+  scenesDone: string[];
 };
 const fresh = (): State => ({
-  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, wordVoices: {}, teacher: 'both',
+  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, wordVoices: {}, teacher: 'both', scenesDone: [],
 });
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -34,6 +35,7 @@ type Ctx = {
   setWordVoice: (wordId: string, who: Speaker, uri: string) => void;
   deleteWordVoice: (wordId: string, who: Speaker) => void;
   setTeacher: (t: Teacher) => void;
+  completeScene: (id: string) => boolean;
   resetAll: () => void;
   toast: (msg: string) => void;
   toastMsg: string | null;
@@ -101,6 +103,11 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       return { ...p, wordVoices };
     }),
     setTeacher: (teacher) => setS((p) => ({ ...p, teacher })),
+    completeScene: (id) => {
+      if (latest.current.scenesDone.includes(id)) return false;
+      setS((p) => (p.scenesDone.includes(id) ? p : { ...p, scenesDone: [...p.scenesDone, id], stars: p.stars + 3 }));
+      return true;
+    },
     resetAll: () => setS((p) => {
       Object.values(p.wordVoices).forEach((v) => Object.values(v).forEach((u) => u && deleteVoiceFile(u)));
       return fresh();

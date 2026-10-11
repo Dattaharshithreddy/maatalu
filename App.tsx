@@ -14,8 +14,10 @@ import Home from './src/screens/Home';
 import Lesson, { LessonMode } from './src/screens/Lesson';
 import Parents from './src/screens/Parents';
 import Paywall from './src/screens/Paywall';
+import Stories from './src/screens/Stories';
+import ScenePlayer from './src/screens/ScenePlayer';
 
-type Tab = 'home' | 'parents';
+type Tab = 'home' | 'stories' | 'parents';
 
 function Root() {
   const t = useTheme();
@@ -24,6 +26,7 @@ function Root() {
   const [tab, setTab] = useState<Tab>('home');
   const [lesson, setLesson] = useState<LessonMode | null>(null);
   const [paywall, setPaywall] = useState(false);
+  const [scene, setScene] = useState<{ chapterId: string; index: number } | null>(null);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -34,7 +37,7 @@ function Root() {
   if (!s.profile) return (<><Onboarding /><Toast msg={toastMsg} bottom={ins.bottom + 30} /></>);
 
   const go = (x: Tab) => { stopAll(); setTab(x); };
-  const tabs: [Tab, string, string][] = [['home', '🏡', 'Learn'], ['parents', '🌱', 'For parents']];
+  const tabs: [Tab, string, string][] = [['home', '🏡', 'Learn'], ['stories', '🎭', 'Stories'], ['parents', '🌱', 'For parents']];
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -42,6 +45,7 @@ function Root() {
         <Home openUnit={(index) => setLesson({ kind: 'unit', index })} openReview={() => setLesson({ kind: 'review' })}
           openPaywall={() => setPaywall(true)} />
       )}
+      {tab === 'stories' && <Stories openScene={(chapterId, index) => setScene({ chapterId, index })} openPaywall={() => setPaywall(true)} />}
       {tab === 'parents' && <Parents openPaywall={() => setPaywall(true)} />}
 
       <View style={[st.tabs, { backgroundColor: t.surface, borderTopColor: t.line, paddingBottom: ins.bottom }]}>
@@ -58,6 +62,13 @@ function Root() {
           <Lesson mode={lesson} onClose={() => { stopAll(); setLesson(null); }} />
         )}
         <Toast msg={toastMsg} bottom={ins.bottom + 110} />
+      </Modal>
+      <Modal visible={!!scene} animationType="slide" onRequestClose={() => { stopAll(); setScene(null); }} statusBarTranslucent>
+        {scene && (
+          <ScenePlayer chapterId={scene.chapterId} sceneIndex={scene.index} onClose={() => { stopAll(); setScene(null); }}
+            onGo={(index) => setScene({ ...scene, index })} />
+        )}
+        <Toast msg={toastMsg} bottom={ins.bottom + 40} />
       </Modal>
       <Modal visible={paywall} animationType="slide" onRequestClose={() => setPaywall(false)} statusBarTranslucent>
         <Paywall onClose={() => setPaywall(false)} />

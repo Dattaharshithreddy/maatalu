@@ -6,6 +6,7 @@ import { F, useTheme } from '../theme';
 import { Btn, Card, H2, whoEmoji, whoName } from '../ui';
 import { ALL_WORDS, Speaker, UNITS, Word, speakerFor } from '../content';
 import { dayKey, useStore } from '../store';
+import { Portrait } from '../stories/Actor';
 import { hasRealVoice, importVoiceFile, newId, playSequence, playUri, playWord, stopAll, useVoiceRecorder } from '../audio';
 
 export default function Parents({ openPaywall }: { openPaywall: () => void }) {
@@ -319,6 +320,21 @@ function Settings({ back, openPaywall }: { back: () => void; openPaywall: () => 
       <TextInput value={gpa} onChangeText={setGpa} style={input} />
       <Btn style={{ marginTop: 16 }} label="Save names" disabled={!child.trim()}
         onPress={() => { setProfile({ ...p, child: child.trim(), gma: gma.trim() || p.gma, gpa: gpa.trim() || p.gpa }); toast('Names saved'); }} />
+
+      <H2>Child in the stories</H2>
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        {(['boy', 'girl'] as const).map((k) => {
+          const on = (p.kid ?? 'boy') === k;
+          return (
+            <Pressable key={k} onPress={() => { setProfile({ ...p, kid: k }); toast(k === 'boy' ? 'Stories now show a boy' : 'Stories now show a girl'); }}
+              accessibilityRole="radio" accessibilityState={{ selected: on }}
+              style={[st.vrow, { flex: 1, justifyContent: 'center', backgroundColor: on ? t.leafSoft : t.surface, borderColor: on ? t.leaf : t.line }]}>
+              <Portrait id={k} size={48} />
+              <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 16 }}>{k === 'boy' ? 'Boy' : 'Girl'}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <H2>Who teaches the words?</H2>
       <View style={{ gap: 8 }}>

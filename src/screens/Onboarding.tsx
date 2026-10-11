@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { F, useTheme } from '../theme';
 import { Btn, Muggulu } from '../ui';
 import { Profile, useStore } from '../store';
+import { Portrait } from '../stories/Actor';
 
 const AGES: Profile['age'][] = ['4-6', '7-9', '10-12'];
 
@@ -14,6 +15,7 @@ export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [child, setChild] = useState('');
   const [age, setAge] = useState<Profile['age']>('4-6');
+  const [kid, setKid] = useState<'boy' | 'girl'>('boy');
   const [gma, setGma] = useState('Ammamma');
   const [gpa, setGpa] = useState('Tatayya');
 
@@ -48,6 +50,17 @@ export default function Onboarding() {
             </Pressable>
           ))}
         </View>
+        <Text style={label}>Boy or girl?</Text>
+        <Text style={{ fontFamily: F.body, color: t.muted, marginBottom: 6 }}>This child stars in every story scene.</Text>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          {(['boy', 'girl'] as const).map((k) => (
+            <Pressable key={k} onPress={() => setKid(k)} accessibilityRole="radio" accessibilityState={{ selected: kid === k }}
+              style={[st.kid, { borderColor: kid === k ? t.leaf : t.line, backgroundColor: kid === k ? t.leafSoft : t.surface }]}>
+              <Portrait id={k} size={84} />
+              <Text style={{ fontFamily: F.bold, color: t.ink, fontSize: 16 }}>{k === 'boy' ? 'Boy' : 'Girl'}</Text>
+            </Pressable>
+          ))}
+        </View>
         <Text style={[st.title, { color: t.ink, marginTop: 28 }]}>Family in India</Text>
         <Text style={{ fontFamily: F.body, color: t.muted, marginBottom: 6 }}>Use the names your child calls them. They teach the words in lessons, first as robot voices and later in their own real voices.</Text>
         <Text style={label}>Grandma</Text>
@@ -55,7 +68,7 @@ export default function Onboarding() {
         <Text style={label}>Grandpa</Text>
         <TextInput value={gpa} onChangeText={setGpa} style={input} />
         <Btn style={{ marginTop: 28 }} label="Start learning" disabled={!child.trim()}
-          onPress={() => setProfile({ child: child.trim(), age, gma: gma.trim() || 'Ammamma', gpa: gpa.trim() || 'Tatayya' })} />
+          onPress={() => setProfile({ child: child.trim(), age, kid, gma: gma.trim() || 'Ammamma', gpa: gpa.trim() || 'Tatayya' })} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -69,4 +82,5 @@ const st = StyleSheet.create({
   label: { fontFamily: F.bold, fontSize: 15, marginTop: 14, marginBottom: 6 },
   input: { borderWidth: 2, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, fontFamily: F.body, fontSize: 17 },
   age: { flex: 1, borderWidth: 2, borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+  kid: { flex: 1, borderWidth: 2, borderRadius: 18, paddingVertical: 10, alignItems: 'center', gap: 2 },
 });
