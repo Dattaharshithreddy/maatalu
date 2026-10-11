@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Pressable, View } from 'react-native';
 import { SvgXml } from 'react-native-svg';
 import { ACTOR_VIEWBOX, CHARS, CharArt, EyeState, Viseme } from './art';
 import type { Gesture } from './types';
@@ -9,8 +9,6 @@ export type ArtId = keyof typeof CHARS;
 const [VX, VY, VW, VH] = ACTOR_VIEWBOX;
 const FEET_Y = 192;
 const wrap = (inner: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${VX} ${VY} ${VW} ${VH}">${inner}</svg>`;
-const origin = ([x, y]: [number, number]) => `${((x - VX) / VW) * 100}% ${((y - VY) / VH) * 100}%`;
-const FEET_ORIGIN = origin([0, FEET_Y]);
 
 /** Every layer wrapped as its own SVG document, built once per character. */
 type Wrapped = { armL: string; armR: string; body: string; head: string; top: string; eyes: Record<EyeState, string>; mouth: Record<Viseme, string> };
@@ -31,9 +29,15 @@ function layers(id: ArtId): Wrapped {
 /** Actor frame size for a given scale, in scene units. */
 export const actorBox = (s: number) => ({ w: VW * s, h: VH * s, left: VX * s, top: -(FEET_Y - VY) * s });
 
-const Layer = memo(function Layer({ xml }: { xml: string }) {
+const Layer = memo(function Layer({ xml, w, h }: { xml: string; w: number; h: number }) {
   if (!xml) return null;
-  return <SvgXml xml={xml} width="100%" height="100%" style={StyleSheet.absoluteFill} />;
+  return <SvgXml xml={xml} width={w} height={h} style={{ position: 'absolute', left: 0, top: 0 }} />;
+});
+
+/** Pixel offset of an actor-frame point from the centre of a w x h box (React Native rotates around the centre). */
+const fromCentre = ([x, y]: [number, number], w: number, h: number) => ({
+  dx: ((x - VX) / VW) * w - w / 2,
+  dy: ((y - VY) / VH) * h - h / 2,
 });
 
 /** Arm angles (degrees) and swing for each gesture. Positive turns clockwise. */
@@ -185,19 +189,24 @@ export default function Actor({ id, scale, speaking, gesture, happy, onPress }: 
   const headRot = Animated.add(headIdle.interpolate({ inputRange: [-1, 1], outputRange: [-2.6, 2.6] }), nod.interpolate({ inputRange: [0, 1], outputRange: [0, 5] }));
   const headY = nod.interpolate({ inputRange: [0, 1], outputRange: [0, 4 * scale] });
 
-  const fill = StyleSheet.absoluteFill;
+  const W = box.w, H = box.h;
+  const frame = { position: 'absolute' as const, left: 0, top: 0, width: W, height: H };
+  // Rotate/scale around a pivot: move the pivot to the centre, transform, move it back.
+  const around = (pt: [number, number], t: object[]) => {
+    const { dx, dy } = fromCentre(pt, W, H);
+    return [{ translateX: dx }, { translateY: dy }, ...t, { translateX: -dx }, { translateY: -dy }];
+  };
   return (
-    <Pressable onPress={tap} accessibilityRole="button" accessibilityLabel={id}
-      style={{ position: 'absolute', width: box.w, height: box.h }}>
-      <Animated.View style={[fill, { transformOrigin: FEET_ORIGIN, transform: [{ translateY: hop }, { rotate: bodyRot }, { scaleY }, { scaleX }] }]}>
-        <Animated.View style={[fill, { transformOrigin: origin(art.pivots.armL), transform: [{ rotate: armL }] }]}><Layer xml={L.armL} /></Animated.View>
-        <Layer xml={L.body} />
-        <Animated.View style={[fill, { transformOrigin: origin(art.pivots.armR), transform: [{ rotate: armR }] }]}><Layer xml={L.armR} /></Animated.View>
-        <Animated.View style={[fill, { transformOrigin: origin(art.pivots.neck), transform: [{ translateY: headY }, { rotate: deg(headRot, 30) }] }]}>
-          <Layer xml={L.head} />
-          <Layer xml={L.eyes[showEye]} />
-          <Layer xml={L.mouth[showMouth]} />
-          <Layer xml={L.top} />
+    <Pressable onPress={tap} accessibilityRole="button" accessibilityLabel={id} style={{ width: W, height: H }}>
+      <Animated.View collapsable={false} style={[frame, { transform: [{ translateY: hop }, ...around([0, FEET_Y], [{ rotate: bodyRot }, { scaleY }, { scaleX }])] as any }]}>
+        <Animated.View collapsable={false} style={[frame, { transform: around(art.pivots.armL, [{ rotate: armL }]) as any }]}><Layer xml={L.armL} w={W} h={H} /></Animated.View>
+        <Layer xml={L.body} w={W} h={H} />
+        <Animated.View collapsable={false} style={[frame, { transform: around(art.pivots.armR, [{ rotate: armR }]) as any }]}><Layer xml={L.armR} w={W} h={H} /></Animated.View>
+        <Animated.View collapsable={false} style={[frame, { transform: [{ translateY: headY }, ...around(art.pivots.neck, [{ rotate: deg(headRot, 30) }])] as any }]}>
+          <Layer xml={L.head} w={W} h={H} />
+          <Layer xml={L.eyes[showEye]} w={W} h={H} />
+          <Layer xml={L.mouth[showMouth]} w={W} h={H} />
+          <Layer xml={L.top} w={W} h={H} />
         </Animated.View>
       </Animated.View>
     </Pressable>

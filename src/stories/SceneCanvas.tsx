@@ -16,8 +16,8 @@ export function backgroundXml(scene: Pick<Scene, 'bg' | 'props'>) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SCENE_W} ${SCENE_H}">${BG_DEFS}${BACKGROUNDS[scene.bg] ?? ''}${propsSvg(back)}</svg>`;
 }
 
-const Backdrop = memo(function Backdrop({ xml }: { xml: string }) {
-  return <SvgXml xml={xml} width="100%" height="100%" style={StyleSheet.absoluteFill} />;
+const Backdrop = memo(function Backdrop({ xml, w, h }: { xml: string; w: number; h: number }) {
+  return <SvgXml xml={xml} width={w} height={h} style={{ position: 'absolute', left: 0, top: 0 }} />;
 });
 
 type Props = {
@@ -48,7 +48,8 @@ export default function SceneCanvas({ scene, width, kid, speaking, gesture, happ
     const pos = place(p, ox, oy);
     const isSpeaker = speaking === p.who;
     return (
-      <View key={`${p.who}${p.screen ? 's' : ''}`} style={{ position: 'absolute', left: pos.left, top: pos.top }} pointerEvents="box-none">
+      <View key={`${p.who}${p.screen ? 's' : ''}`} collapsable={false} pointerEvents="box-none"
+        style={{ position: 'absolute', left: pos.left, top: pos.top, width: actorBox(p.s * k).w, height: actorBox(p.s * k).h }}>
         <Actor id={art(p.who)} scale={p.s * k} speaking={isSpeaker} gesture={isSpeaker ? gesture : null} happy={happy}
           onPress={() => onTapActor?.(p.who)} />
       </View>
@@ -61,7 +62,7 @@ export default function SceneCanvas({ scene, width, kid, speaking, gesture, happ
 
   return (
     <View style={{ width, height: SCENE_H * k, overflow: 'hidden' }}>
-      <Backdrop xml={bg} />
+      <Backdrop xml={bg} w={width} h={SCENE_H * k} />
       {onScreen.length > 0 && (
         <View style={{ position: 'absolute', left: sx * k, top: sy * k, width: sw * k, height: sh * k, overflow: 'hidden', borderRadius: 16 * k }}>
           {onScreen.map((p) => actor(p, sx, sy))}
@@ -70,7 +71,7 @@ export default function SceneCanvas({ scene, width, kid, speaking, gesture, happ
       {onStage.map((p) => actor(p))}
       {!!front && (
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-          <Backdrop xml={front} />
+          <Backdrop xml={front} w={width} h={SCENE_H * k} />
         </View>
       )}
     </View>
