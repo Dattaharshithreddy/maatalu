@@ -371,10 +371,10 @@ export const CHAPTERS: Chapter[] = [
         L('kid', 'ఎందుకు, అమ్మమ్మా?', 'enduku, ammammaa?', 'Why, Ammamma?'),
         L('ammamma', 'దానికి ఒక కథ ఉంది. చెప్తాను.', 'daaniki oka katha undi. cheptaanu.', "There's a story for that. I'll tell you.", 'nod'),
       ]),
-      S('A tiny mouse', 'చిన్న ఎలుక', 'house', 'kid tatayya', [
+      S('A tiny mouse', 'బుల్లి ఎలుక', 'house', 'kid tatayya', [
         L('kid', 'వినాయకుడి వాహనం ఏమిటి?', 'vinaayakudi vaahanam aemiti?', "What is Vinayaka's vehicle?"),
         L('tatayya', 'ఎలుక!', 'eluka!', 'A mouse!', 'point'),
-        L('kid', 'అంత చిన్న ఎలుక మీదా!', 'anta chinna eluka meedaa!', 'On such a small mouse!', 'cheer'),
+        L('kid', 'అంత బుల్లి ఎలుక మీదా!', 'anta bulli eluka meedaa!', 'On such a tiny mouse!', 'cheer'),
       ], [['ganesha', 600, 860, 0.9]]),
       S('Clay Ganesha', 'మట్టి వినాయకుడు', 'courtyard', 'kid amma', [
         L('amma', 'మట్టితో వినాయకుడిని చేద్దాం.', 'mattito vinaayakudini cheddaam.', "Let's make Vinayaka with clay."),
@@ -494,13 +494,13 @@ export const CHAPTERS: Chapter[] = [
         L('kid', 'పాయసం చాలా తియ్యగా ఉంది!', 'paayasam chaalaa tiyyagaa undi!', 'The payasam is very sweet!', 'cheer'),
       ], [['payasam', 600, 880, 1.2, true]]),
       S("The baby's name", 'పాపకి పేరు', 'living', 'kid ammamma', [
-        L('ammamma', 'ఈరోజు చిన్న పాపకి పేరు పెడతారు.', 'eeroju chinna paapaki peru pedataaru.', 'Today the little baby gets her name.'),
+        L('ammamma', 'ఈరోజు బుజ్జి పాపకి పేరు పెడతారు.', 'eeroju bujji paapaki peru pedataaru.', 'Today the little baby gets her name.'),
         L('kid', 'పాప పేరు ఏమిటి?', 'paapa peru aemiti?', "What's the baby's name?"),
         L('ammamma', 'విను, ఇప్పుడు చెప్తారు.', 'vinu, ippudu cheptaaru.', "Listen, they'll say it now.", 'nod'),
       ], [['cradle', 1000, 820, 0.9]]),
       S('First letter', 'అక్షరాభ్యాసం', 'puja', 'kid tatayya', [
-        L('tatayya', 'బియ్యంలో అ రాయి.', 'biyyamlo a raayi.', 'Write అ in the rice.', 'point'),
-        L('kid', 'అ!', 'a!', 'అ!', 'cheer'),
+        L('tatayya', 'బియ్యంలో అ అక్షరం రాయి.', 'biyyamlo a aksharam raayi.', 'Write the letter అ in the rice.', 'point'),
+        L('kid', 'అ! అమ్మలో అ!', 'a! ammalo a!', 'అ! The అ in అమ్మ!', 'cheer'),
         L('tatayya', 'శభాష్! నువ్వు బాగా చదువుకుంటావు.', 'shabaash! nuvvu baagaa chaduvukuntaavu.', 'Well done! You will study well.', 'clap'),
       ], [['rice_plate_turmeric', 600, 890, 1.1, true]]),
       S("Uncle's wedding", 'మామయ్య పెళ్ళి', 'mandapam', 'kid amma', [
