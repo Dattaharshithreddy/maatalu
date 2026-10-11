@@ -91,4 +91,8 @@ async function main() {
   console.log(`Wrote ${rows.length} entries to src/stories/voices.ts`);
 }
 
-main().catch((e) => { console.error(e.message || e); process.exit(1); });
+main().catch((e) => {
+  const msg = String(e.message || e).replace(/\s+/g, ' ').slice(0, 400);
+  console.error(process.env.GITHUB_ACTIONS ? `::error::${msg}` : msg);
+  process.exit(1);
+});
