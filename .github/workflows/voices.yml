@@ -1,0 +1,65 @@
+name: Generate story voices
+
+# Records every story line with Google Cloud Text-to-Speech, commits the audio, then builds a new APK.
+# Needs the repository secret GOOGLE_TTS_API_KEY. Runs by hand, or when the story scripts or voice settings change.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/stories/scenes.ts
+      - tools/voice/**
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: voices
+  cancel-in-progress: false
+
+jobs:
+  voices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Check the API key is set
+        env:
+          GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+        run: |
+          if [ -z "$GOOGLE_TTS_API_KEY" ]; then
+            echo "::error::Add your Google Cloud API key as the repository secret GOOGLE_TTS_API_KEY (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
+      - name: Record story lines
+        env:
+          GOOGLE_TTS_API_KEY: ${{ secrets.GOOGLE_TTS_API_KEY }}
+        run: node --experimental-strip-types tools/voice/generate.mts
+
+      - name: Commit recordings
+        id: commit
+        run: |
+          git add assets/voices src/stories/voices.ts
+          if git diff --cached --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No new recordings."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "Update story voice recordings"
+            git push
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build a new APK with the voices
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run android-apk.yml --ref main

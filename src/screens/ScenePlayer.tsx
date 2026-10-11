@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { F, useTheme } from '../theme';
 import { Btn } from '../ui';
 import { useStore } from '../store';
-import { playUri, Role, speakRole, stopAll, useVoiceRecorder } from '../audio';
+import { playAsset, playUri, Role, speakRole, stopAll, useVoiceRecorder } from '../audio';
+import { VOICE_FILES } from '../stories/voices';
 import SceneCanvas from '../stories/SceneCanvas';
 import { Portrait } from '../stories/Actor';
 import { CHAPTERS, personalise } from '../stories/scenes';
@@ -61,13 +62,16 @@ export default function ScenePlayer({ chapterId, sceneIndex, onClose, onGo }: Pr
   const say = (i: number, then?: () => void) => {
     const L = lines[i];
     setCur(i);
-    stopRef.current = speakRole(personalise(L.te, kid, 'te'), role(L.who),
-      () => { if (!alive.current) return; setSpeaking(L.who); setGesture(L.g ?? null); },
-      () => {
-        if (!alive.current) return;
-        setSpeaking(null); setGesture(null);
-        if (then) timer.current = setTimeout(() => alive.current && then(), 550);
-      });
+    const text = personalise(L.te, kid, 'te');
+    const onStart = () => { if (!alive.current) return; setSpeaking(L.who); setGesture(L.g ?? null); };
+    const onEnd = () => {
+      if (!alive.current) return;
+      setSpeaking(null); setGesture(null);
+      if (then) timer.current = setTimeout(() => alive.current && then(), 550);
+    };
+    // Natural recorded voice when the line has one, otherwise the phone's Telugu voice.
+    const file = VOICE_FILES[`${role(L.who)}|${text}`];
+    stopRef.current = file ? playAsset(file, onStart, onEnd) : speakRole(text, role(L.who), onStart, onEnd);
   };
 
   const step = (i: number) => {

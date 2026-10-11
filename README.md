@@ -32,7 +32,6 @@
 - Light and dark mode; progress and recordings saved on the phone
 
 ## Not built yet (next phase)
-- Real family voices for story lines (story lines use the robot voice today)
 - Automatically splitting ONE long recording into words: needs Telugu speech recognition with word timestamps (cloud AI + a small server)
 - Voice cloning from sample recordings: needs a paid cloning service and the grandparent's consent
 - Real payments: connect RevenueCat + Google Play Billing
@@ -42,3 +41,10 @@
 
 ## Story art
 Characters, backgrounds and props are generated SVG. Edit the Python in `tools/art/` and run `python3 tools/art/export_ts.py` to rebuild `src/stories/art.ts`. Scene scripts live in `src/stories/scenes.ts`.
+
+## Story voices
+Story lines play natural recorded voices (Google Cloud Text-to-Speech, Chirp 3 HD), with the phone's Telugu voice as a fallback.
+1. In Google Cloud: enable the Cloud Text-to-Speech API and create an API key restricted to it.
+2. In GitHub: Settings > Secrets and variables > Actions > New repository secret, name `GOOGLE_TTS_API_KEY`.
+3. Run Actions > Generate story voices. It records any line without a recording, commits `assets/voices`, and starts an APK build.
+Pick each character's voice and speed in `tools/voice/config.mjs`. It also re-runs on its own whenever `src/stories/scenes.ts` changes.

@@ -102,6 +102,31 @@ export function speakRole(text: string, role: Role, onStart?: () => void, onEnd?
   return () => { Speech.stop(); end(); };
 }
 
+/** Plays a recording bundled with the app (a require()d file). Returns a function that stops it. */
+export function playAsset(source: number, onStart?: () => void, onEnd?: () => void) {
+  stopAll();
+  let ended = false;
+  const end = () => { if (!ended) { ended = true; onEnd?.(); } };
+  try {
+    const p = createAudioPlayer(source);
+    current = p;
+    let started = false;
+    const sub = p.addListener('playbackStatusUpdate', (st) => {
+      if (!started && st.playing) { started = true; onStart?.(); }
+      if (st.didJustFinish) {
+        sub.remove();
+        try { p.remove(); } catch {}
+        if (current === p) current = null;
+        end();
+      }
+    });
+    p.play();
+    // Some phones never report "playing"; start the mouth anyway.
+    setTimeout(() => { if (!started && !ended) { started = true; onStart?.(); } }, 300);
+  } catch { onStart?.(); end(); }
+  return () => { stopAll(); end(); };
+}
+
 export function playUri(uri: string, onEnd?: () => void) {
   stopAll();
   try {
