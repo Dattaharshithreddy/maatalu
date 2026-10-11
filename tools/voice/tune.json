@@ -1,0 +1,9 @@
+{
+  "_help": "Shapes each character's age after Sarvam records them. formant: >1 smaller/younger body, <1 bigger/older. pitch: target median Hz (0 = keep). range: pitch movement (>1 livelier). duration: >1 slower. Measured speaker pitches are in tools/voice/README.md.",
+  "ammamma": { "formant": 0.94, "pitch": 150, "range": 0.85, "duration": 1.06 },
+  "tatayya": { "formant": 0.96, "pitch": 90, "range": 0.85, "duration": 1.05 },
+  "amma": { "formant": 1.0, "pitch": 0, "range": 1.0, "duration": 1.0 },
+  "nanna": { "formant": 1.0, "pitch": 0, "range": 1.0, "duration": 1.0 },
+  "boy": { "formant": 1.15, "pitch": 285, "range": 1.15, "duration": 1.0 },
+  "girl": { "formant": 1.17, "pitch": 305, "range": 1.2, "duration": 1.0 }
+}

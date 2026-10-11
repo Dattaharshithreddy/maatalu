@@ -1,5 +1,6 @@
 // Records every story line with Sarvam AI text-to-speech (Bulbul v3) and writes
-// assets/voices/*.mp3 plus src/stories/voices.ts, which maps each line to its recording.
+// tools/voice/raw/*.mp3 plus src/stories/voices.ts, which maps each line to its (aged) copy in assets/voices.
+// Then run tools/voice/tune.py to make assets/voices from the raw recordings.
 // Also makes tools/voice/samples/<speaker>.mp3 so voices can be chosen by ear.
 //
 // Run: SARVAM_API_KEY=... node --experimental-strip-types tools/voice/generate.mts
@@ -14,7 +15,7 @@ import { ALL_SPEAKERS, LANGUAGE, MODEL, SAMPLE_TEXT, VOICES } from './config.mjs
 
 type Role = keyof typeof VOICES;
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const OUT = join(ROOT, 'assets', 'voices');
+const OUT = join(ROOT, 'tools', 'voice', 'raw');
 const MAP = join(ROOT, 'src', 'stories', 'voices.ts');
 const SAMPLES = join(ROOT, 'tools', 'voice', 'samples');
 const KEY = process.env.SARVAM_API_KEY;

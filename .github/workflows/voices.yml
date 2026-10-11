@@ -43,10 +43,20 @@ jobs:
           SARVAM_API_KEY: ${{ secrets.SARVAM_API_KEY }}
         run: node --experimental-strip-types tools/voice/generate.mts
 
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Age each character's voice
+        run: |
+          sudo apt-get install -y -qq ffmpeg > /dev/null
+          pip install -q praat-parselmouth
+          python tools/voice/tune.py
+
       - name: Commit recordings
         id: commit
         run: |
-          git add assets/voices src/stories/voices.ts tools/voice/samples
+          git add -A assets/voices src/stories/voices.ts tools/voice
           if git diff --cached --quiet; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
             echo "No new recordings."
