@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'n
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CHAPTERS, personalise } from '../../src/stories/scenes.ts';
+import { readFileSync } from 'node:fs';
 import { ALL_SPEAKERS, LANGUAGE, MODEL, SAMPLE_TEXT, VOICES } from './config.mjs';
 
 type Role = keyof typeof VOICES;
@@ -19,6 +20,12 @@ const OUT = join(ROOT, 'tools', 'voice', 'raw');
 const MAP = join(ROOT, 'src', 'stories', 'voices.ts');
 const SAMPLES = join(ROOT, 'tools', 'voice', 'samples');
 const KEY = process.env.SARVAM_API_KEY;
+
+// Respellings for words the voice mispronounces: only the text sent to Sarvam changes.
+const RESPELL: Record<string, string[]> = Object.fromEntries(
+  Object.entries(JSON.parse(readFileSync(join(ROOT, 'tools', 'voice', 'respell.json'), 'utf8')) as Record<string, unknown>)
+    .filter(([k]) => !k.startsWith('_')) as [string, string[]][]);
+const spoken = (text: string) => Object.entries(RESPELL).reduce((t, [w, alts]) => t.split(w).join(alts[0]), text);
 const DRY = !!process.env.DRY_RUN;
 
 // Every (character voice, spoken text) the app can play.
@@ -33,7 +40,7 @@ for (const ch of CHAPTERS) for (const sc of ch.scenes) for (const l of sc.lines)
 
 const fileFor = (role: Role, text: string) => {
   const v = VOICES[role];
-  const h = createHash('sha1').update(`${MODEL}|${LANGUAGE}|${v.speaker}|${v.pace}|${text}`).digest('hex').slice(0, 16);
+  const h = createHash('sha1').update(`${MODEL}|${LANGUAGE}|${v.speaker}|${v.pace}|${spoken(text)}`).digest('hex').slice(0, 16);
   return `${role}-${h}.mp3`;
 };
 
@@ -49,7 +56,7 @@ async function tts(speaker: string, pace: number, text: string): Promise<Buffer>
     await new Promise((r) => setTimeout(r, 3000 * attempt));
   }
 }
-const synth = (role: Role, text: string) => tts(VOICES[role].speaker, VOICES[role].pace, text);
+const synth = (role: Role, text: string) => tts(VOICES[role].speaker, VOICES[role].pace, spoken(text));
 
 async function main() {
   const chars = [...items.values()].reduce((a, i) => a + i.text.length, 0);
@@ -65,6 +72,14 @@ async function main() {
     if (!existsSync(f)) writeFileSync(f, await tts(sp, 1.0, SAMPLE_TEXT));
   }
   console.log(`Samples ready for ${ALL_SPEAKERS.length} speakers in tools/voice/samples`);
+
+  // Every respelling option, in Ammamma's voice, so the best one can be chosen by ear.
+  for (const [word, alts] of Object.entries(RESPELL)) {
+    for (const [i, alt] of alts.entries()) {
+      const f = join(SAMPLES, `respell-${word}-${i + 1}.mp3`);
+      if (!existsSync(f)) writeFileSync(f, await tts(VOICES.ammamma.speaker, VOICES.ammamma.pace, `ఈరోజు ${alt} పాపకి పేరు పెడతారు.`));
+    }
+  }
 
   const todo = [...items.values()].filter((i) => !existsSync(join(OUT, fileFor(i.role, i.text))));
   console.log(`${todo.length} new recordings to make`);

@@ -30,3 +30,8 @@ then shaped by `tune.py`: kids up to a child's range (~280–305 Hz) with smalle
 | sumit | 138 Hz | | | |
 | manan | 143 Hz | | | |
 | advait | 157 Hz | | | |
+
+## Fixing a mispronounced word
+Add it to `respell.json` with one or more alternative spellings. The app keeps showing the normal spelling;
+only the text sent to Sarvam changes. Each option is saved as `samples/respell-<word>-<n>.mp3`: listen,
+move the best one to the front of its list, and push. Only lines with that word are re-recorded.

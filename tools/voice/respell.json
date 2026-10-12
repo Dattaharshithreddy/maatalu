@@ -1,0 +1,4 @@
+{
+  "_help": "Words the voice says wrong. The app still shows the normal spelling; only the text sent to Sarvam is changed. The first spelling in each list is used; every spelling is also saved as tools/voice/samples/respell-<word>-<n>.mp3 so you can pick the best one by ear and move it to the front.",
+  "చిన్న": ["చిన్ న", "చిన్‌న", "చిన్న"]
+}
