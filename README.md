@@ -47,3 +47,11 @@ Story lines play natural recorded voices (Sarvam AI Bulbul v3, Telugu), with the
 1. In GitHub: Settings > Secrets and variables > Actions > New repository secret, name `SARVAM_API_KEY`, value: your Sarvam API key.
 2. Run Actions > Generate story voices. It records any line without a recording, commits `assets/voices`, and starts an APK build.
 Pick each character's speaker and pace in `tools/voice/config.mjs`; listen to `tools/voice/samples/` to choose. It also re-runs whenever `src/stories/scenes.ts` changes.
+
+## iPhone (iOS)
+The **Build iOS app** workflow runs on every push. Without Apple secrets it builds for the iPhone Simulator to prove
+the app compiles. To send real builds to TestFlight:
+1. Join the Apple Developer Program ($99/year) and create the app in App Store Connect with bundle ID `com.maatalu.app`.
+2. In App Store Connect > Users and Access > Integrations, create an API key with the App Manager role and download the .p8 file.
+3. Add repository secrets: `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (paste the whole .p8 file).
+4. Run Actions > Build iOS app. The build appears in TestFlight once Apple processes it; invite testers by email there.
