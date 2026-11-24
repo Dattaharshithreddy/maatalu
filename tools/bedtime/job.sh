@@ -7,7 +7,7 @@ mkdir -p /work && cd /work
 git clone -q --depth 1 https://github.com/Dattaharshithreddy/Swaram.git
 git clone -q --depth 1 https://github.com/AI4Bharat/IndicF5.git
 git clone -q --depth 1 https://github.com/Dattaharshithreddy/maatalu.git
-pip install -q x-transformers torchdiffeq vocos==0.1.0 einops jieba pypinyin ema-pytorch librosa soundfile safetensors \
+pip install -q x-transformers torchdiffeq vocos==0.1.0 einops jieba pypinyin ema-pytorch librosa soundfile safetensors onnx onnxruntime \
   accelerate datasets matplotlib wandb tqdm "numpy>=2,<2.3" 2>&1 | tail -2
 pip uninstall -y -q torchvision || true
 export PYTHONPATH=/work/IndicF5:/work/IndicF5/src:/work/Swaram/edge
