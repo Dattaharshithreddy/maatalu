@@ -19,9 +19,9 @@ import numpy as np
 import soundfile as sf
 
 SR = 24000
-SPEED = 0.9           # slower than normal speech, for bedtime
+SPEED = 0.78          # much slower than normal speech: this is for falling asleep
 SWARAM = os.environ.get("SWARAM", "/work/Swaram")
-GAP = 0.6             # silence between lines (seconds), plus each line's own pause
+GAP = 1.1             # silence between lines (seconds), plus 1.5x each line's own pause
 REF = os.environ.get("REF_WAV", "/b/audio/l11.wav")
 REF_TEXT = os.environ.get(
     "REF_TEXT",
@@ -102,7 +102,7 @@ def main(stories_path: str, only: list[str]) -> None:
             a, _ = sf.read(f"{CACHE}/{key_of(line['te'])}.wav", dtype="float32")
             print(f"{st['id']} {i + 1}/{len(st['lines'])} {len(a) / SR:.1f}s", flush=True)
             starts.append(round(pos / SR, 2))
-            gap = np.zeros(int((GAP + float(line.get("p", 0))) * SR), dtype=np.float32)
+            gap = np.zeros(int((GAP + 1.5 * float(line.get("p", 0))) * SR), dtype=np.float32)
             parts += [a, gap]
             pos += len(a) + len(gap)
         parts.append(np.zeros(int(6 * SR), dtype=np.float32))
