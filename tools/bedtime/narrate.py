@@ -1,4 +1,5 @@
-"""Narrates the bedtime stories in Harshith's own voice (IndicF5 voice cloning) on a Hugging Face GPU job.
+"""Narrates the bedtime stories in Harshith's own voice on a Hugging Face GPU job, with the same IndicF5
+renderer his Swaram studio uses (github.com/Dattaharshithreddy/Swaram, cloud/render.py).
 
 Runs inside the job with his private bucket mounted at /b:
   - reference clip: /b/audio/l11.wav (a line from one of his reels) and its words in REF_TEXT
@@ -18,7 +19,8 @@ import numpy as np
 import soundfile as sf
 
 SR = 24000
-TEMPO = 0.92          # slower than normal speech, for bedtime
+SPEED = 0.9           # slower than normal speech, for bedtime
+SWARAM = os.environ.get("SWARAM", "/work/Swaram")
 GAP = 0.6             # silence between lines (seconds), plus each line's own pause
 REF = os.environ.get("REF_WAV", "/b/audio/l11.wav")
 REF_TEXT = os.environ.get(
@@ -45,12 +47,32 @@ def level(a: np.ndarray, target_rms: float = 0.08) -> np.ndarray:
     return a * min(1.0, 0.95 / peak)
 
 
-def stretch(a: np.ndarray) -> np.ndarray:
-    """Slows speech without changing pitch (ffmpeg atempo)."""
-    sf.write("/tmp/in.wav", a, SR)
-    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", "/tmp/in.wav", "-filter:a", f"atempo={TEMPO}", "/tmp/out.wav"], check=True)
-    b, _ = sf.read("/tmp/out.wav", dtype="float32")
-    return b
+def render_missing(stories: list, only: list[str]) -> None:
+    """Records every line that is not in the cache yet, in one run of Swaram's renderer."""
+    parts, keys = [], []
+    for st in stories:
+        if only and st["id"] not in only:
+            continue
+        for line in st["lines"]:
+            k = key_of(line["te"])
+            if not os.path.exists(f"{CACHE}/{k}.wav") and k not in keys:
+                keys.append(k)
+                parts.append({"i": len(parts), "voice": "datta", "text": line["te"], "speed": SPEED})
+    print(f"{len(parts)} new lines to record", flush=True)
+    if not parts:
+        return
+    os.makedirs("/work/job", exist_ok=True)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", REF, "-ac", "1", "-ar", str(SR), "/work/job/ref.wav"], check=True)
+    job = {"steps": 32, "cfg": 2.0, "voices": {"datta": {"wav": "ref.wav", "text": REF_TEXT}}, "parts": parts}
+    json.dump(job, open("/work/job/job.json", "w"), ensure_ascii=False)
+    subprocess.run([sys.executable, "render.py", "--job", "/work/job/job.json", "--out", "/work/out"], cwd=f"{SWARAM}/cloud", check=True)
+    for part, k in zip(parts, keys):
+        a, _ = sf.read(f"/work/out/parts/part-{part['i']:05d}.wav", dtype="float32")
+        sf.write(f"{CACHE}/{k}.wav", level(trim(a)), SR)
+
+
+def key_of(text: str) -> str:
+    return hashlib.sha1(f"{REF}|{REF_TEXT}|{SPEED}|{text}".encode()).hexdigest()[:16]
 
 
 def pad(n: int) -> np.ndarray:
@@ -68,27 +90,16 @@ def pad(n: int) -> np.ndarray:
 
 
 def main(stories_path: str, only: list[str]) -> None:
-    from transformers import AutoModel
-
     stories = json.load(open(stories_path, encoding="utf-8"))
     os.makedirs(CACHE, exist_ok=True)
-    model = AutoModel.from_pretrained("ai4bharat/IndicF5", trust_remote_code=True)
+    render_missing(stories, only)
 
     for st in stories:
         if only and st["id"] not in only:
             continue
         parts, starts, pos = [np.zeros(int(1.5 * SR), dtype=np.float32)], [], int(1.5 * SR)
         for i, line in enumerate(st["lines"]):
-            key = hashlib.sha1(f"{REF}|{REF_TEXT}|{TEMPO}|{line['te']}".encode()).hexdigest()[:16]
-            path = f"{CACHE}/{key}.wav"
-            if os.path.exists(path):
-                a, _ = sf.read(path, dtype="float32")
-            else:
-                a = np.asarray(model(line["te"], ref_audio_path=REF, ref_text=REF_TEXT))
-                if a.dtype == np.int16:
-                    a = a.astype(np.float32) / 32768
-                a = stretch(level(trim(a.astype(np.float32))))
-                sf.write(path, a, SR)
+            a, _ = sf.read(f"{CACHE}/{key_of(line['te'])}.wav", dtype="float32")
             print(f"{st['id']} {i + 1}/{len(st['lines'])} {len(a) / SR:.1f}s", flush=True)
             starts.append(round(pos / SR, 2))
             gap = np.zeros(int((GAP + float(line.get("p", 0))) * SR), dtype=np.float32)
