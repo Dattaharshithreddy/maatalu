@@ -1,0 +1,39 @@
+name: Add bedtime narration
+
+# Brings the bedtime-story recordings (made on Harshith's Hugging Face GPU by tools/bedtime/narrate.py)
+# into the app. Needs a repository secret HF_TOKEN: a Hugging Face token with read access.
+# After it commits, the APK and website rebuild by themselves.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Download the recordings from the private bucket
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          test -n "$HF_TOKEN" || { echo "Add the HF_TOKEN repository secret first."; exit 1; }
+          mkdir -p assets/bedtime
+          base="https://huggingface.co/buckets/HarshithReddy05/tirumala-reel/resolve/maatalu/bedtime"
+          for id in $(node -e "console.log(require('./tools/bedtime/stories.json').map(s=>s.id).join(' '))"); do
+            curl -fsSL -H "Authorization: Bearer $HF_TOKEN" "$base/$id.mp3" -o "assets/bedtime/$id.mp3" \
+              && curl -fsSL -H "Authorization: Bearer $HF_TOKEN" "$base/$id.json" -o "assets/bedtime/$id.json" \
+              && echo "got $id" || { echo "no recording yet for $id"; rm -f "assets/bedtime/$id.mp3" "assets/bedtime/$id.json"; }
+          done
+      - name: Link the recordings into the app
+        run: node tools/bedtime/collect.mjs
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/bedtime src/bedtime/audio.ts
+          git diff --cached --quiet && echo "Nothing new." || { git commit -m "Add bedtime narration"; git push; }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Maatalu",
     "slug": "maatalu",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -26,17 +26,36 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Maatalu · Telugu for little ones",
+      "shortName": "Maatalu",
+      "themeColor": "#1F6B4F",
+      "backgroundColor": "#1F6B4F",
+      "output": "single"
     },
     "plugins": [
       [
         "expo-audio",
         {
-          "microphonePermission": "Maatalu uses the microphone so family members can record voice notes and word pronunciations."
+          "microphonePermission": "Maatalu uses the microphone so family members can record voice notes and word pronunciations.",
+          "enableBackgroundPlayback": true
         }
       ],
       "expo-font",
-      "expo-sharing"
-    ]
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#1F6B4F"
+        }
+      ]
+    ],
+    "description": "Telugu for little ones: everyday words, family stories with Ammamma and Tatayya, and calm bedtime stories told by Chandamama.",
+    "experiments": {
+      "baseUrl": "/maatalu"
+    }
   }
 }

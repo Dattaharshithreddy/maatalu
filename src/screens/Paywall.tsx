@@ -19,6 +19,7 @@ export default function Paywall({ onClose }: { onClose: () => void }) {
   const perks = [
     ['📚', `All ${UNITS.length} units: ${ALL_WORDS.length}+ words, the Telugu alphabet and real sentences`],
     ['👵', `${s.profile?.gma} and ${s.profile?.gpa} teaching in their own real voices`],
+    ['🌙', 'Every bedtime story, told by Chandamama, with a sleep timer'],
     ['📲', `Send ${s.profile?.gma} a voice note on WhatsApp after each lesson`],
     ['📈', 'Weekly progress for parents'],
   ];

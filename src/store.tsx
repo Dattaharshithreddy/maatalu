@@ -15,9 +15,10 @@ export type State = {
   wordVoices: Record<string, Partial<Record<Speaker, string>>>;
   teacher: Teacher;
   scenesDone: string[];
+  bedDone: string[];
 };
 const fresh = (): State => ({
-  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, wordVoices: {}, teacher: 'both', scenesDone: [],
+  profile: null, stars: 0, learned: [], streak: 0, lastDay: null, minutes: {}, premium: false, wordVoices: {}, teacher: 'both', scenesDone: [], bedDone: [],
 });
 export const dayKey = (d = new Date()) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -36,6 +37,7 @@ type Ctx = {
   deleteWordVoice: (wordId: string, who: Speaker) => void;
   setTeacher: (t: Teacher) => void;
   completeScene: (id: string) => boolean;
+  finishBedStory: (id: string) => void;
   resetAll: () => void;
   toast: (msg: string) => void;
   toastMsg: string | null;
@@ -108,6 +110,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setS((p) => (p.scenesDone.includes(id) ? p : { ...p, scenesDone: [...p.scenesDone, id], stars: p.stars + 3 }));
       return true;
     },
+    finishBedStory: (id) => setS((p) => (p.bedDone.includes(id) ? p : { ...p, bedDone: [...p.bedDone, id], stars: p.stars + 2 })),
     resetAll: () => setS((p) => {
       Object.values(p.wordVoices).forEach((v) => Object.values(v).forEach((u) => u && deleteVoiceFile(u)));
       return fresh();

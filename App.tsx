@@ -16,8 +16,10 @@ import Parents from './src/screens/Parents';
 import Paywall from './src/screens/Paywall';
 import Stories from './src/screens/Stories';
 import ScenePlayer from './src/screens/ScenePlayer';
+import Bedtime from './src/screens/Bedtime';
+import SleepPlayer from './src/screens/SleepPlayer';
 
-type Tab = 'home' | 'stories' | 'parents';
+type Tab = 'home' | 'stories' | 'bedtime' | 'parents';
 
 function Root() {
   const t = useTheme();
@@ -27,6 +29,7 @@ function Root() {
   const [lesson, setLesson] = useState<LessonMode | null>(null);
   const [paywall, setPaywall] = useState(false);
   const [scene, setScene] = useState<{ chapterId: string; index: number } | null>(null);
+  const [bed, setBed] = useState<string | null>(null);
 
   useEffect(() => {
     setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
@@ -37,7 +40,7 @@ function Root() {
   if (!s.profile) return (<><Onboarding /><Toast msg={toastMsg} bottom={ins.bottom + 30} /></>);
 
   const go = (x: Tab) => { stopAll(); setTab(x); };
-  const tabs: [Tab, string, string][] = [['home', '🏡', 'Learn'], ['stories', '🎭', 'Stories'], ['parents', '🌱', 'For parents']];
+  const tabs: [Tab, string, string][] = [['home', '🏡', 'Learn'], ['stories', '🎭', 'Stories'], ['bedtime', '🌙', 'Bedtime'], ['parents', '🌱', 'Parents']];
 
   return (
     <View style={{ flex: 1, backgroundColor: t.bg }}>
@@ -46,13 +49,14 @@ function Root() {
           openPaywall={() => setPaywall(true)} />
       )}
       {tab === 'stories' && <Stories openScene={(chapterId, index) => setScene({ chapterId, index })} openPaywall={() => setPaywall(true)} />}
+      {tab === 'bedtime' && <Bedtime openStory={(id) => setBed(id)} openPaywall={() => setPaywall(true)} />}
       {tab === 'parents' && <Parents openPaywall={() => setPaywall(true)} />}
 
-      <View style={[st.tabs, { backgroundColor: t.surface, borderTopColor: t.line, paddingBottom: ins.bottom }]}>
+      <View style={[st.tabs, tab === 'bedtime' ? { backgroundColor: '#141C40', borderTopColor: 'rgba(255,255,255,0.08)' } : { backgroundColor: t.surface, borderTopColor: t.line }, { paddingBottom: ins.bottom }]}>
         {tabs.map(([id, e, label]) => (
           <Pressable key={id} onPress={() => go(id)} style={st.tab} accessibilityRole="tab" accessibilityState={{ selected: tab === id }}>
             <Text style={{ fontSize: 22, opacity: tab === id ? 1 : 0.5 }}>{e}</Text>
-            <Text style={{ fontFamily: F.bold, fontSize: 13, color: tab === id ? t.leaf : t.muted }}>{label}</Text>
+            <Text style={{ fontFamily: F.bold, fontSize: 13, color: tab === id ? (tab === 'bedtime' ? '#FFE7A3' : t.leaf) : (tab === 'bedtime' ? '#A9B2D6' : t.muted) }}>{label}</Text>
           </Pressable>
         ))}
       </View>
@@ -69,6 +73,9 @@ function Root() {
             onGo={(index) => setScene({ ...scene, index })} />
         )}
         <Toast msg={toastMsg} bottom={ins.bottom + 40} />
+      </Modal>
+      <Modal visible={!!bed} animationType="fade" onRequestClose={() => setBed(null)} statusBarTranslucent>
+        {bed && <SleepPlayer storyId={bed} onClose={() => setBed(null)} />}
       </Modal>
       <Modal visible={paywall} animationType="slide" onRequestClose={() => setPaywall(false)} statusBarTranslucent>
         <Paywall onClose={() => setPaywall(false)} />

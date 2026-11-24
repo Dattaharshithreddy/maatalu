@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024"><g transform="translate(512 512) scale(0.66) translate(-512 -540)"><g transform="translate(40 0)">
+      <g transform="translate(700 268)">
+        <circle r="128" fill="#F2B705"/>
+        <path d="M-58 -34 Q-36 -12 -14 -34" stroke="#164E3A" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <path d="M30 -34 Q52 -12 74 -34" stroke="#164E3A" stroke-width="16" fill="none" stroke-linecap="round"/>
+      </g>
+      <path d="M250 300 h420 a120 120 0 0 1 120 120 v200 a120 120 0 0 1 -120 120 h-230 l-120 104 v-104 h-70
+               a120 120 0 0 1 -120 -120 v-200 a120 120 0 0 1 120 -120 z" fill="#FFF8E7"/>
+      <text x="470" y="640" text-anchor="middle" font-family="Baloo Tammudu 2" font-weight="800"
+          font-size="330" fill="#1F6B4F">మా</text></g></g></svg>

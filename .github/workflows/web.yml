@@ -1,0 +1,38 @@
+name: Publish website
+
+# Builds the web version of Maatalu and publishes it on GitHub Pages:
+# https://dattaharshithreddy.github.io/maatalu/
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the website
+        run: npx expo export --platform web --output-dir dist
+      - name: Make every link open the app
+        run: |
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+      - name: Publish to the gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          force_orphan: true

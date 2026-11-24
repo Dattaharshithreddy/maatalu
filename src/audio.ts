@@ -247,3 +247,19 @@ export function useVoiceRecorder() {
 }
 
 export const newId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+
+/** Phone voice for Chandamama when a bedtime story has no recording: a calm male voice, slow. */
+export function speakNarrator(text: string, onEnd?: () => void) {
+  stopAll();
+  let ended = false;
+  const end = () => { if (!ended) { ended = true; onEnd?.(); } };
+  if (voiceChecked && !haveTelugu) {
+    const t = setTimeout(end, 900 + text.length * 85);
+    return () => { clearTimeout(t); };
+  }
+  Speech.speak(text, {
+    language: 'te-IN', voice: voiceId.gpa, pitch: distinct ? 0.95 : 0.85, rate: 0.72,
+    onDone: end, onError: () => { setTimeout(end, 900 + text.length * 85); },
+  });
+  return () => { ended = true; Speech.stop(); };
+}

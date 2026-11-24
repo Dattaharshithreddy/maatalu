@@ -15,7 +15,15 @@
 ## Play Store release
 `eas build -p android --profile production` creates an .aab file to upload in Google Play Console.
 
+## Website
+Every push to `main` also publishes the web version at **https://dattaharshithreddy.github.io/maatalu/**
+(workflow *Publish website*). The first time, open Settings > Pages in GitHub and check the source is the `gh-pages` branch.
+
 ## What works
+- 🌙 Bedtime tab: 5 calm bedtime stories told by Chandamama (the moon), narrated in Harshith's own voice.
+  Dark night-sky player that dims itself, breathing moon, read-along Telugu + English lines,
+  sleep timer (story end, 15 or 30 minutes: carries on into the next story, then fades out), keeps playing with the
+  screen locked (lock-screen controls). First two stories free, the rest with Plus. Stories live in `src/bedtime/stories.ts`.
 - Stories tab: 108 animated scenes in 12 chapters (calls with Ammamma, daily life, food, a trip to India, Sankranti, Ugadi and Sri Rama Navami, Vinayaka Chavithi, Dasara and Bathukamma, Deepavali, birthdays and family celebrations, seasons, games and stories). First two chapters free.
 - A family of six characters (boy, girl, Ammamma, Tatayya, Amma, Nanna) that breathe, sway, blink, wave, cheer, point, clap, do namaste and lip-sync while they speak. Tap a character to make them jump.
 - Watch mode plays the whole conversation; Your turn mode stops at the child's lines so they hold the mic, say it, and hear their own voice come out of their character
@@ -55,3 +63,17 @@ the app compiles. To send real builds to TestFlight:
 2. In App Store Connect > Users and Access > Integrations, create an API key with the App Manager role and download the .p8 file.
 3. Add repository secrets: `APPLE_TEAM_ID`, `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (paste the whole .p8 file).
 4. Run Actions > Build iOS app. The build appears in TestFlight once Apple processes it; invite testers by email there.
+
+## Bedtime narration (Harshith's voice)
+1. Stories are in `src/bedtime/stories.ts`. After editing, run `node --experimental-strip-types tools/bedtime/export.mts`
+   to refresh `tools/bedtime/stories.json`, and push.
+2. The narration is made by `tools/bedtime/narrate.py` on a Hugging Face GPU job (IndicF5 cloning his voice from a line
+   of his own reel narration). It writes `maatalu/bedtime/<story>.mp3` + `.json` into his private bucket
+   `HarshithReddy05/tirumala-reel`. Only new or changed lines are re-recorded.
+3. Add a repository secret `HF_TOKEN` (a Hugging Face read token), then run Actions > *Add bedtime narration*.
+   It copies the recordings into `assets/bedtime`, links them in `src/bedtime/audio.ts`, and the APK and site rebuild.
+Until a story has a recording, the app reads it with the phone's Telugu voice.
+
+## Logo
+`python3 tools/brand/make.py` rebuilds the logo, every app icon, the splash and the store feature graphic
+(`tools/brand/feature-graphic.png`, 1024 x 500, ready for Google Play).
